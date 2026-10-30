@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- App-specific external storage for captured screenshot events -->
+    <external-files-path
+        name="external_pictures_events"
+        path="Pictures/events" />
+    <external-files-path
+        name="external_files"
+        path="." />
+
+    <!-- App internal files directory for stored motion event images -->
+    <files-path
+        name="internal_events"
+        path="events" />
+    <files-path
+        name="internal_files"
+        path="." />
+
+    <!-- Cache directories for temporary screenshot buffer processing -->
+    <cache-path
+        name="cache_snapshots"
+        path="snapshots" />
+    <cache-path
+        name="cache"
+        path="." />
+
+    <!-- External cache directory -->
+    <external-cache-path
+        name="external_cache"
+        path="." />
+</paths>
