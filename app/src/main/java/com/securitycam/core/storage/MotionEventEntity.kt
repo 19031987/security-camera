@@ -1,13 +1,18 @@
 package com.securitycam.core.storage
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.util.UUID
 
 /**
  * Room database entity recording a verified motion detection intrusion event.
+ * Indexed by timestamp for high-performance gallery listing and FIFO pruning.
  */
-@Entity(tableName = "motion_events")
+@Entity(
+    tableName = "motion_events",
+    indices = [Index(value = ["timestamp"])]
+)
 data class MotionEventEntity(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val timestamp: Long,
