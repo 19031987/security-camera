@@ -367,7 +367,14 @@ class SurveillanceService : LifecycleService() {
             _liveState.value = _liveState.value.copy(motionResult = result)
 
             if (result.isMotionDetected && _liveState.value.isArmed) {
-                onMotionIntrusionDetected(image, result, timestamp)
+                val bitmap = try {
+                    image.toBitmap()
+                } catch (e: Exception) {
+                    null
+                }
+                if (bitmap != null) {
+                    onMotionIntrusionDetected(bitmap, result, timestamp)
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error in frame analysis: ${e.message}", e)
@@ -376,10 +383,9 @@ class SurveillanceService : LifecycleService() {
         }
     }
 
-    private fun onMotionIntrusionDetected(image: ImageProxy, result: MotionResult, timestamp: Long) {
+    private fun onMotionIntrusionDetected(bitmap: Bitmap, result: MotionResult, timestamp: Long) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val bitmap: Bitmap = image.toBitmap()
                 val screenshotFile = app.imageStorageManager.saveScreenshot(bitmap, timestamp, result.boundingBoxes)
                 val payload = AlertPayload(
                     eventId = UUID.randomUUID().toString(),

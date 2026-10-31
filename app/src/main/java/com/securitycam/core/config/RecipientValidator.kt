@@ -13,7 +13,7 @@ object RecipientValidator {
 
     // RFC 5322 compliant email regex with valid TLD requirement (2-15 alpha characters)
     private val EMAIL_REGEX = Pattern.compile(
-        "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,15}$"
+        "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,15}$"
     )
 
     /**
