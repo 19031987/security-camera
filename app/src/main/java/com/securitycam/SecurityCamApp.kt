@@ -9,13 +9,42 @@ import android.os.Build
 import android.os.Environment
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.securitycam.core.alerting.AlertCoordinator
+import com.securitycam.core.alerting.AndroidSmsDispatcher
+import com.securitycam.core.alerting.DefaultAlertCoordinator
+import com.securitycam.core.alerting.DefaultAndroidSmsTransport
+import com.securitycam.core.alerting.EmailDispatcher
+import com.securitycam.core.alerting.JakartaEmailDispatcher
+import com.securitycam.core.alerting.SmsDispatcher
+import com.securitycam.core.config.CooldownManager
+import com.securitycam.core.config.SecuritySettings
+import com.securitycam.core.config.SettingsRepository
+import com.securitycam.core.config.SharedPreferencesSettingsRepository
+import com.securitycam.core.storage.AppDatabase
+import com.securitycam.core.storage.EventRepository
+import com.securitycam.core.storage.FileImageStorageManager
+import com.securitycam.core.storage.ImageStorageManager
+import com.securitycam.core.storage.RoomEventRepository
+import com.securitycam.core.surveillance.AdaptiveBackgroundMotionDetector
+import com.securitycam.core.surveillance.MotionConfig
+import com.securitycam.core.surveillance.MotionDetector
 import java.io.File
 
 /**
  * Main Application class for Android Security Camera.
- * Initializes notification channels, singleton accessors, and storage directories.
+ * Initializes notification channels, singleton dependency graph, and storage directories.
  */
 class SecurityCamApp : Application() {
+
+    lateinit var settingsRepository: SettingsRepository
+    lateinit var appDatabase: AppDatabase
+    lateinit var eventRepository: EventRepository
+    lateinit var imageStorageManager: ImageStorageManager
+    lateinit var motionDetector: MotionDetector
+    lateinit var cooldownManager: CooldownManager
+    lateinit var smsDispatcher: SmsDispatcher
+    lateinit var emailDispatcher: EmailDispatcher
+    lateinit var alertCoordinator: AlertCoordinator
 
     companion object {
         const val TAG = "SecurityCamApp"
@@ -48,8 +77,43 @@ class SecurityCamApp : Application() {
 
         initNotificationChannels()
         initStorageDirectories()
+        initDependencyGraph()
 
-        Log.i(TAG, "SecurityCamApp initialized successfully.")
+        Log.i(TAG, "SecurityCamApp initialized successfully with complete dependency graph.")
+    }
+
+    /**
+     * Initializes the core application singleton dependency graph.
+     */
+    fun initDependencyGraph() {
+        settingsRepository = SharedPreferencesSettingsRepository.create(this)
+        appDatabase = AppDatabase.getInstance(this)
+        eventRepository = RoomEventRepository(appDatabase.motionEventDao())
+        imageStorageManager = FileImageStorageManager(this)
+
+        val settings: SecuritySettings = settingsRepository.getSettings()
+        motionDetector = AdaptiveBackgroundMotionDetector(
+            MotionConfig(
+                sensitivity = settings.sensitivity,
+                lowLightCompensation = settings.lowLightCompensation
+            )
+        )
+        cooldownManager = CooldownManager(settings.cooldownSeconds)
+
+        smsDispatcher = AndroidSmsDispatcher(
+            transport = DefaultAndroidSmsTransport(this),
+            webhookUrlProvider = { settingsRepository.getSettings().webhookUrl }
+        )
+        emailDispatcher = JakartaEmailDispatcher(
+            settingsProvider = { settingsRepository.getSettings() }
+        )
+        alertCoordinator = DefaultAlertCoordinator(
+            settingsRepository = settingsRepository,
+            eventRepository = eventRepository,
+            cooldownManager = cooldownManager,
+            smsDispatcher = smsDispatcher,
+            emailDispatcher = emailDispatcher
+        )
     }
 
     /**

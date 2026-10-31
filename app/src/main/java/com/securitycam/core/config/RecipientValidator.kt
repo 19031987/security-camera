@@ -8,8 +8,8 @@ import java.util.regex.Pattern
  */
 object RecipientValidator {
 
-    // ITU-T E.164 standard: '+' followed by 1-9 country code and 1 to 14 subscriber digits (max 15 digits total)
-    private val E164_REGEX = Pattern.compile("^\\+[1-9]\\d{1,14}$")
+    // ITU-T E.164 standard: '+' followed by 1-9 country code and 6 to 14 subscriber digits (7 to 15 digits total)
+    private val E164_REGEX = Pattern.compile("^\\+[1-9]\\d{6,14}$")
 
     // RFC 5322 compliant email regex with valid TLD requirement (2-15 alpha characters)
     private val EMAIL_REGEX = Pattern.compile(
