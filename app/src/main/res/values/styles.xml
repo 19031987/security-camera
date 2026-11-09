@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cards -->
+    <style name="Widget.SecurityCam.Card" parent="Widget.Material3.CardView.Filled">
+        <item name="cardBackgroundColor">@color/surface_container</item>
+        <item name="cardElevation">0dp</item>
+        <item name="cardCornerRadius">@dimen/radius_md</item>
+        <item name="strokeWidth">0dp</item>
+    </style>
+
+    <!-- Kept for existing references -->
+    <style name="Widget.SecurityCam.CardView" parent="Widget.SecurityCam.Card" />
+
+    <!-- Round tonal buttons that sit on top of the camera feed -->
+    <style name="Widget.SecurityCam.OverlayIconButton" parent="Widget.Material3.Button.IconButton.Filled.Tonal">
+        <item name="backgroundTint">@color/panel_scrim</item>
+        <item name="iconTint">@color/overlay_icon_tint</item>
+        <item name="android:minWidth">@dimen/touch_target</item>
+        <item name="android:minHeight">@dimen/touch_target</item>
+    </style>
+
+    <style name="Widget.SecurityCam.PrimaryAction" parent="Widget.Material3.Button">
+        <item name="android:minHeight">@dimen/primary_action_height</item>
+        <item name="android:textAppearance">@style/TextAppearance.Material3.TitleMedium</item>
+        <item name="iconGravity">textStart</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Material3.Corner.Large</item>
+    </style>
+
+    <!-- Text -->
+    <style name="TextAppearance.SecurityCam.Badge" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.03</item>
+    </style>
+
+    <style name="TextAppearance.SecurityCam.SectionTitle" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textColor">@color/on_surface</item>
+    </style>
+
+    <style name="TextAppearance.SecurityCam.Supporting" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textColor">@color/on_surface_muted</item>
+    </style>
+
+    <style name="TextAppearance.SecurityCam.DayHeader" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:textColor">@color/on_surface_muted</item>
+    </style>
+
+    <!-- Small delivery-status pill -->
+    <style name="Widget.SecurityCam.StatusChip" parent="">
+        <item name="android:background">@drawable/chip_status_background</item>
+        <item name="android:paddingStart">@dimen/space_sm</item>
+        <item name="android:paddingEnd">@dimen/space_sm</item>
+        <item name="android:paddingTop">3dp</item>
+        <item name="android:paddingBottom">3dp</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="ShapeAppearance.SecurityCam.Thumbnail" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/space_md</item>
+    </style>
+</resources>

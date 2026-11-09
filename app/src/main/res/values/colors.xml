@@ -1,43 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Primary Cyan Brand Accent -->
-    <color name="primary">#00E5FF</color>
-    <color name="primary_variant">#00B0FF</color>
-    <color name="on_primary">#001E28</color>
+    <!-- Brand: calm teal on deep navy -->
+    <color name="primary">#4FD8EB</color>
+    <color name="primary_variant">#2BB8CC</color>
+    <color name="on_primary">#00363D</color>
+    <color name="primary_container">#004F58</color>
+    <color name="on_primary_container">#A6EEFF</color>
 
-    <!-- Secondary Accent -->
-    <color name="secondary">#38BDF8</color>
-    <color name="secondary_variant">#0284C7</color>
-    <color name="on_secondary">#031A2E</color>
+    <color name="secondary">#9CCBFB</color>
+    <color name="secondary_variant">#6FA8DC</color>
+    <color name="on_secondary">#003353</color>
+    <color name="secondary_container">#1F3A56</color>
+    <color name="on_secondary_container">#D0E4FF</color>
 
-    <!-- Dark Security Theme Surfaces -->
+    <color name="tertiary">#C4B5FD</color>
+    <color name="on_tertiary">#2A1B5E</color>
+    <color name="tertiary_container">#3B2F73</color>
+    <color name="on_tertiary_container">#E6DEFF</color>
+
+    <color name="error">#FF6B81</color>
+    <color name="on_error">#4A0010</color>
+    <color name="error_container">#5C1220</color>
+    <color name="on_error_container">#FFDADD</color>
+
+    <!-- Surfaces (dark only) -->
     <color name="background">#0A0E17</color>
-    <color name="surface">#131B2E</color>
+    <color name="surface">#0F1522</color>
+    <color name="surface_container_lowest">#070A11</color>
+    <color name="surface_container_low">#111827</color>
+    <color name="surface_container">#151D2E</color>
+    <color name="surface_container_high">#1B2538</color>
+    <color name="surface_container_highest">#243044</color>
     <color name="surface_variant">#1E293B</color>
     <color name="surface_highlight">#253248</color>
     <color name="on_background">#F8FAFC</color>
     <color name="on_surface">#F1F5F9</color>
-    <color name="on_surface_muted">#94A3B8</color>
+    <color name="on_surface_muted">#9FB0C7</color>
+    <color name="outline">#5B6B82</color>
+    <color name="outline_variant">#2B384D</color>
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
 
-    <!-- Security Status Tints -->
-    <color name="status_armed">#00E676</color>
-    <color name="status_armed_container">#0A3319</color>
-    <color name="status_disarmed">#FFAB00</color>
+    <!-- Security status tints -->
+    <color name="status_armed">#3DDC97</color>
+    <color name="status_armed_container">#0C3524</color>
+    <color name="status_disarmed">#FFB84D</color>
     <color name="status_disarmed_container">#3B2800</color>
-    <color name="status_alert">#FF1744</color>
-    <color name="status_alert_container">#42000E</color>
-    <color name="status_night_mode">#A855F7</color>
+    <color name="status_alert">#FF4D67</color>
+    <color name="status_alert_container">#4A0A18</color>
+    <color name="status_night_mode">#C4B5FD</color>
 
-    <!-- Overlays and Controls -->
+    <!-- Camera overlays -->
     <color name="camera_preview_overlay">#80000000</color>
+    <color name="panel_scrim">#E6111827</color>
     <color name="motion_bounding_box">#FF1744</color>
     <color name="motion_bounding_box_fill">#33FF1744</color>
-    <color name="card_border">#334155</color>
+    <color name="card_border">#2B384D</color>
     <color name="divider">#1E293B</color>
 
-    <!-- System Navigation and Status Bars -->
-    <color name="status_bar_color">#0A0E17</color>
-    <color name="nav_bar_color">#0A0E17</color>
+    <!-- System bars are transparent; screens draw edge to edge -->
+    <color name="status_bar_color">#00000000</color>
+    <color name="nav_bar_color">#00000000</color>
 </resources>

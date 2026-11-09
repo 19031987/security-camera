@@ -5,113 +5,92 @@
     android:id="@+id/cardEventItem"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="16dp"
-    android:layout_marginVertical="6dp"
-    app:cardBackgroundColor="@color/surface"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="2dp"
-    app:strokeColor="@color/card_border"
-    app:strokeWidth="1dp">
+    android:layout_marginHorizontal="@dimen/space_lg"
+    android:layout_marginVertical="@dimen/space_xs"
+    android:clickable="true"
+    android:focusable="true">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="12dp">
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="@dimen/space_md">
 
-        <!-- Captured Image Thumbnail -->
-        <ImageView
+        <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/ivThumbnail"
-            android:layout_width="88dp"
-            android:layout_height="66dp"
-            android:background="@color/surface_variant"
-            android:contentDescription="@string/title_event_history"
+            android:layout_width="128dp"
+            android:layout_height="72dp"
+            android:background="@drawable/thumbnail_placeholder"
+            android:contentDescription="@string/cd_event_screenshot"
             android:scaleType="centerCrop"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:src="@drawable/ic_stat_surveillance" />
+            app:shapeAppearance="@style/ShapeAppearance.SecurityCam.Thumbnail" />
 
-        <!-- Timestamp Text -->
-        <TextView
-            android:id="@+id/tvTimestamp"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_marginEnd="8dp"
-            android:textColor="@color/on_surface"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            app:layout_constraintEnd_toStartOf="@id/btnDeleteEvent"
-            app:layout_constraintStart_toEndOf="@id/ivThumbnail"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:text="Oct 31, 2026 14:22:05" />
-
-        <!-- Motion Score Text -->
-        <TextView
-            android:id="@+id/tvMotionScore"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_marginTop="2dp"
-            android:layout_marginEnd="8dp"
-            android:textColor="@color/primary"
-            android:textSize="13sp"
-            app:layout_constraintEnd_toStartOf="@id/btnDeleteEvent"
-            app:layout_constraintStart_toEndOf="@id/ivThumbnail"
-            app:layout_constraintTop_toBottomOf="@id/tvTimestamp"
-            tools:text="Motion Score: 88%" />
-
-        <!-- Delivery Status Chips Container -->
         <LinearLayout
-            android:id="@+id/layoutChips"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_marginTop="6dp"
-            android:orientation="horizontal"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/btnDeleteEvent"
-            app:layout_constraintStart_toEndOf="@id/ivThumbnail"
-            app:layout_constraintTop_toBottomOf="@id/tvMotionScore">
+            android:layout_marginStart="@dimen/space_md"
+            android:layout_weight="1"
+            android:orientation="vertical">
 
-            <!-- SMS Delivery Status Chip -->
             <TextView
-                android:id="@+id/chipSms"
-                android:layout_width="wrap_content"
+                android:id="@+id/tvTimestamp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="6dp"
-                android:background="@drawable/chip_status_background"
-                android:paddingHorizontal="6dp"
-                android:paddingVertical="2dp"
-                android:textSize="10sp"
-                android:textStyle="bold"
-                tools:text="SMS: Sent" />
+                android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                android:textColor="@color/on_surface"
+                tools:text="14:22:05" />
 
-            <!-- Email Delivery Status Chip -->
-            <TextView
-                android:id="@+id/chipEmail"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/chip_status_background"
-                android:paddingHorizontal="6dp"
-                android:paddingVertical="2dp"
-                android:textSize="10sp"
-                android:textStyle="bold"
-                tools:text="Email: Sent" />
+                android:layout_marginTop="2dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvMotionScore"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                    android:textColor="@color/primary"
+                    tools:text="Motion Score: 88%" />
+
+                <TextView
+                    android:id="@+id/tvLowLight"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_sm"
+                    android:drawablePadding="2dp"
+                    android:text="@string/badge_low_light"
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                    android:textColor="@color/status_night_mode"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layoutChips"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_sm"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/chipSms"
+                    style="@style/Widget.SecurityCam.StatusChip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    tools:text="SMS: Sent" />
+
+                <TextView
+                    android:id="@+id/chipEmail"
+                    style="@style/Widget.SecurityCam.StatusChip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="Email: Sent" />
+            </LinearLayout>
         </LinearLayout>
-
-        <!-- Delete Item Button -->
-        <ImageButton
-            android:id="@+id/btnDeleteEvent"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/action_delete_event"
-            android:src="@drawable/ic_delete"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
+    </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -2,12 +2,12 @@
 <resources>
     <!-- Application & General -->
     <string name="app_name">Security Camera</string>
-    <string name="app_subtitle">Personal Surveillance &amp; Intrusion Monitor</string>
+    <string name="app_subtitle">Motion alerts from a spare phone</string>
 
     <!-- Navigation & Screen Titles -->
-    <string name="title_live_preview">Live Surveillance</string>
-    <string name="title_event_history">Event History</string>
-    <string name="title_settings">Settings &amp; Alerts</string>
+    <string name="title_live_preview">Live</string>
+    <string name="title_event_history">History</string>
+    <string name="title_settings">Settings</string>
 
     <!-- Notification Channels -->
     <string name="channel_surveillance_name">Surveillance Service</string>
@@ -18,84 +18,84 @@
     <!-- Notification Text -->
     <string name="notification_surveillance_title">Security Camera Active</string>
     <string name="notification_surveillance_text">Monitoring camera feed 24/7 for movement…</string>
-    <string name="notification_alert_title">⚠️ Motion Detected!</string>
-    <string name="notification_alert_text_template">Movement detected at %1$s. Tap to inspect screenshot.</string>
+    <string name="notification_alert_title">Motion detected</string>
+    <string name="notification_alert_text_template">Movement detected at %1$s. Tap to see the screenshot.</string>
     <string name="action_notification_disarm">Disarm</string>
     <string name="action_notification_view_feed">View Feed</string>
 
     <!-- Live Preview Status & Controls -->
-    <string name="status_armed">🔴 ARMED</string>
-    <string name="status_disarmed">⚪ DISARMED</string>
-    <string name="status_motion_detected">MOTION DETECTED</string>
-    <string name="status_monitoring_active">Active Surveillance (30 FPS)</string>
-    <string name="status_standby">Camera Standby</string>
-    <string name="action_arm">Arm Camera</string>
+    <string name="status_armed">Armed</string>
+    <string name="status_disarmed">Disarmed</string>
+    <string name="status_motion_detected">Motion detected</string>
+    <string name="status_monitoring_active">Watching for motion</string>
+    <string name="status_standby">Not watching. Arm the camera to get alerts.</string>
+    <string name="action_arm">Arm camera</string>
     <string name="action_disarm">Disarm</string>
-    <string name="action_switch_camera">Switch Lens</string>
-    <string name="action_night_mode_toggle">Night Mode</string>
-    <string name="action_torch_toggle">Torch Light</string>
+    <string name="action_switch_camera">Switch camera</string>
+    <string name="action_night_mode_toggle">Night mode</string>
+    <string name="action_torch_toggle">Torch</string>
 
     <!-- Settings: Surveillance Category -->
-    <string name="pref_category_surveillance">Surveillance &amp; Vision</string>
-    <string name="pref_sensitivity_title">Motion Sensitivity</string>
-    <string name="pref_sensitivity_summary">Adjusts pixel difference threshold and minimum trigger area (1–100)</string>
-    <string name="pref_cooldown_title">Alert Cooldown Window</string>
-    <string name="pref_cooldown_summary">Minimum seconds between consecutive external alert transmissions</string>
+    <string name="pref_category_surveillance">Detection</string>
+    <string name="pref_sensitivity_title">Motion sensitivity</string>
+    <string name="pref_sensitivity_summary">Higher values trigger on smaller movements.</string>
+    <string name="pref_cooldown_title">Time between alerts</string>
+    <string name="pref_cooldown_summary">Shortest gap between two SMS or email alerts.</string>
     <string name="pref_camera_lens_title">Default Camera Lens</string>
-    <string name="pref_night_mode_title">Low-Light Night Adaptation</string>
+    <string name="pref_night_mode_title">Low-light enhancement</string>
     <string name="pref_torch_assist_title">Automatic Torch Assist</string>
     <string name="pref_torch_assist_summary">Enable LED torch when room ambient luminance drops below threshold</string>
 
     <!-- Settings: SMS Alert Category -->
-    <string name="pref_category_sms">SMS Text Alerting</string>
-    <string name="pref_sms_enable_title">Enable SMS Alerts</string>
-    <string name="pref_sms_enable_summary">Send text alerts to configured phone numbers upon motion detection</string>
-    <string name="pref_sms_recipients_title">Recipient Phone Numbers</string>
-    <string name="pref_sms_recipients_hint">+1234567890, +447123456789</string>
-    <string name="pref_sms_webhook_url_title">Webhook URL (Wi-Fi Fallback)</string>
+    <string name="pref_category_sms">SMS alerts</string>
+    <string name="pref_sms_enable_title">Send SMS alerts</string>
+    <string name="pref_sms_enable_summary">Text these numbers when motion is detected.</string>
+    <string name="pref_sms_recipients_title">Phone number</string>
+    <string name="pref_sms_recipients_hint">+1234567890</string>
+    <string name="pref_sms_webhook_url_title">Webhook URL (optional)</string>
     <string name="pref_sms_webhook_url_hint">https://api.example.com/alerts</string>
 
     <!-- Settings: Email Alert Category -->
-    <string name="pref_category_email">Email Alerting with Screenshots</string>
-    <string name="pref_email_enable_title">Enable Email Alerts</string>
-    <string name="pref_email_enable_summary">Send MIME multipart HTML emails with attached JPEG screenshots</string>
-    <string name="pref_email_recipients_title">Recipient Email Addresses</string>
-    <string name="pref_email_recipients_hint">owner@example.com, security@example.com</string>
-    <string name="pref_smtp_host_title">SMTP Server Host</string>
-    <string name="pref_smtp_port_title">SMTP Port</string>
-    <string name="pref_smtp_username_title">SMTP Username / Email</string>
-    <string name="pref_smtp_password_title">SMTP App Password</string>
-    <string name="pref_smtp_ssl_title">Use SSL / STARTTLS</string>
+    <string name="pref_category_email">Email alerts</string>
+    <string name="pref_email_enable_title">Send email alerts</string>
+    <string name="pref_email_enable_summary">Email the screenshot when motion is detected.</string>
+    <string name="pref_email_recipients_title">Email address</string>
+    <string name="pref_email_recipients_hint">owner@example.com</string>
+    <string name="pref_smtp_host_title">SMTP server</string>
+    <string name="pref_smtp_port_title">Port</string>
+    <string name="pref_smtp_username_title">Username</string>
+    <string name="pref_smtp_password_title">App password</string>
+    <string name="pref_smtp_ssl_title">Use SSL</string>
 
     <!-- Settings: Diagnostics Category -->
-    <string name="pref_category_diagnostics">Diagnostics &amp; System</string>
-    <string name="action_send_test_alert">Send Test Alert</string>
-    <string name="test_alert_sending">Sending test SMS and Email alerts…</string>
-    <string name="test_alert_success">Test alert dispatched successfully!</string>
+    <string name="pref_category_diagnostics">System</string>
+    <string name="action_send_test_alert">Send test alert</string>
+    <string name="test_alert_sending">Sending test alert…</string>
+    <string name="test_alert_success">Test alert sent.</string>
     <string name="test_alert_failed">Test alert failed: %1$s</string>
-    <string name="action_request_battery_whitelist">Exempt from Battery Optimization</string>
-    <string name="battery_whitelist_summary">Prevents Android from putting the surveillance service to sleep</string>
+    <string name="action_request_battery_whitelist">Allow background running</string>
+    <string name="battery_whitelist_summary">Stops Android from pausing the camera to save battery.</string>
 
     <!-- Event History Screen -->
-    <string name="history_empty_title">No Motion Events Recorded</string>
-    <string name="history_empty_subtitle">When motion is detected while armed, captured screenshots and alert logs appear here.</string>
+    <string name="history_empty_title">No events yet</string>
+    <string name="history_empty_subtitle">Screenshots appear here when the armed camera detects motion.</string>
     <string name="status_sms_sent">SMS Sent</string>
     <string name="status_sms_failed">SMS Failed</string>
     <string name="status_sms_suppressed">SMS Cooldown</string>
     <string name="status_email_sent">Email Sent</string>
     <string name="status_email_failed">Email Failed</string>
     <string name="status_email_suppressed">Email Cooldown</string>
-    <string name="action_share_image">Share Screenshot</string>
-    <string name="action_delete_event">Delete Event</string>
-    <string name="action_clear_all_events">Clear All History</string>
-    <string name="confirm_clear_history">Are you sure you want to permanently delete all motion events?</string>
+    <string name="action_share_image">Share</string>
+    <string name="action_delete_event">Delete event</string>
+    <string name="action_clear_all_events">Delete all events</string>
+    <string name="confirm_clear_history">This permanently deletes every event and its screenshot.</string>
 
     <!-- Runtime Permissions -->
-    <string name="permission_camera_rationale">Camera permission is required to monitor the surroundings and detect motion.</string>
+    <string name="permission_camera_rationale">Camera access is needed to watch for motion.</string>
     <string name="permission_notification_rationale">Notification permission is required to post ongoing service status and urgent motion alerts.</string>
     <string name="permission_sms_rationale">SMS permission is required to send cellular intrusion text alerts to your phone.</string>
-    <string name="permission_button_grant">Grant Permission</string>
-    <string name="permission_button_settings">Open App Settings</string>
+    <string name="permission_button_grant">Allow camera</string>
+    <string name="permission_button_settings">Open app settings</string>
 
     <!-- Common Actions -->
     <string name="action_save">Save</string>
@@ -104,4 +104,62 @@
     <string name="action_delete">Delete</string>
     <string name="action_retry">Retry</string>
     <string name="action_dismiss">Dismiss</string>
+    <!-- Navigation -->
+    <string name="nav_live">Live</string>
+    <string name="nav_history">History</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Live screen -->
+    <string name="status_motion_detected_score">Motion detected · %1$d%%</string>
+    <string name="status_camera_starting">Starting camera…</string>
+    <string name="latest_event_none_title">No events yet</string>
+    <string name="latest_event_none_subtitle">Motion screenshots will show up here.</string>
+    <string name="latest_event_title">Last motion · %1$s</string>
+    <plurals name="events_today">
+        <item quantity="one">%1$d event today</item>
+        <item quantity="other">%1$d events today</item>
+    </plurals>
+    <string name="events_today_none">Nothing today</string>
+    <string name="cd_latest_event">Open event history</string>
+    <string name="permission_camera_title">Camera access is off</string>
+
+    <!-- History -->
+    <string name="history_day_today">Today</string>
+    <string name="history_day_yesterday">Yesterday</string>
+    <plurals name="history_day_count">
+        <item quantity="one">%1$d event</item>
+        <item quantity="other">%1$d events</item>
+    </plurals>
+    <string name="badge_low_light">Low light</string>
+    <string name="event_deleted">Event deleted</string>
+    <string name="action_undo">Undo</string>
+    <string name="event_detail_title">Motion event</string>
+    <string name="event_detail_id">Event ID: %1$s</string>
+    <string name="cd_event_screenshot">Event screenshot</string>
+    <string name="share_missing_file">The screenshot file is missing.</string>
+    <string name="share_failed">Couldn\'t share the screenshot.</string>
+    <string name="share_subject">Security Camera screenshot</string>
+    <string name="share_text">Motion detected by Security Camera at %1$s</string>
+
+    <!-- Settings -->
+    <string name="pref_night_mode_summary">Brightens dark scenes before checking for motion.</string>
+    <string name="pref_sms_webhook_helper">Used to send alerts over Wi-Fi when SMS can\'t be sent.</string>
+    <string name="action_add">Add</string>
+    <string name="pref_smtp_advanced">Mail server settings</string>
+    <string name="pref_smtp_sender_title">Sender address</string>
+    <string name="pref_smtp_tls_title">Use STARTTLS</string>
+    <string name="error_invalid_phone">Use international format, for example +1234567890.</string>
+    <string name="error_invalid_email">Enter a valid email address.</string>
+    <string name="test_alert_summary">Sends one SMS and one email using the settings above.</string>
+    <string name="test_sms_not_configured">SMS: not set up, or no recipients.</string>
+    <string name="test_sms_ok">SMS: delivered to %1$d recipient(s).</string>
+    <string name="test_sms_failed">SMS: failed. %1$s</string>
+    <string name="test_email_not_configured">Email: not set up, or no recipients.</string>
+    <string name="test_email_ok">Email: delivered to %1$d recipient(s).</string>
+    <string name="test_email_failed">Email: failed. %1$s</string>
+    <string name="battery_status_exempt">Allowed. The camera keeps running in the background.</string>
+    <string name="battery_status_restricted">Not allowed yet. Android may pause the camera.</string>
+    <string name="battery_request_failed">Couldn\'t open the battery setting.</string>
+    <string name="value_percent">%1$d%%</string>
+    <string name="value_seconds">%1$d s</string>
 </resources>
