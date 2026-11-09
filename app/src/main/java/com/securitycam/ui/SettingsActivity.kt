@@ -17,6 +17,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.chip.ChipGroup
+import com.securitycam.core.alerting.NtfyPushDispatcher
 import com.securitycam.core.remote.ViewerServer
 import java.net.Inet4Address
 import java.net.NetworkInterface
@@ -123,6 +124,13 @@ class SettingsActivity : AppCompatActivity() {
             ViewerServer.isAcceptablePassword(settings.remoteViewPassword)
         binding.groupRemoteFields.visibility = View.VISIBLE
         binding.switchKnownPeople.isChecked = settings.knownPeopleEnabled
+
+        // Phone notifications
+        binding.etPushTopic.setText(settings.pushTopic)
+        binding.etPushServer.setText(settings.pushServerUrl)
+        binding.switchPushKnown.isChecked = settings.pushNotifyKnownPeople
+        binding.switchPush.isChecked = settings.pushEnabled && NtfyPushDispatcher.isValidTopic(settings.pushTopic)
+        binding.groupPushFields.visibility = if (binding.switchPush.isChecked) View.VISIBLE else View.GONE
 
         // 7. Only show a channel's fields while that channel is switched on
         binding.groupSmsFields.visibility = if (settings.smsEnabled) View.VISIBLE else View.GONE
@@ -241,6 +249,32 @@ class SettingsActivity : AppCompatActivity() {
         }
         binding.btnShareRemoteLink.setOnClickListener { shareRemoteLink() }
 
+        // Phone notifications: switching on creates a private topic if there isn't one yet
+        binding.switchPush.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked && !NtfyPushDispatcher.isValidTopic(binding.etPushTopic.text?.toString().orEmpty())) {
+                binding.etPushTopic.setText(NtfyPushDispatcher.generateTopic())
+            }
+            binding.groupPushFields.visibility = if (isChecked) View.VISIBLE else View.GONE
+            savePushSettings()
+        }
+        binding.btnNewPushTopic.setOnClickListener {
+            binding.etPushTopic.setText(NtfyPushDispatcher.generateTopic())
+            savePushSettings()
+        }
+        binding.btnSharePushTopic.setOnClickListener {
+            if (savePushSettings()) {
+                val topic = binding.etPushTopic.text?.toString().orEmpty()
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, getString(R.string.push_share_text, topic))
+                }
+                startActivity(Intent.createChooser(intent, getString(R.string.action_share_topic)))
+            }
+        }
+        binding.switchPushKnown.setOnCheckedChangeListener { _, _ -> savePushSettings() }
+        binding.etPushTopic.setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) savePushSettings() }
+        binding.etPushServer.setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) savePushSettings() }
+
         // Known people
         binding.switchKnownPeople.setOnCheckedChangeListener { _, isChecked ->
             val cur = app.settingsRepository.getSettings()
@@ -317,6 +351,32 @@ class SettingsActivity : AppCompatActivity() {
         updateRemoteViewStatus()
     }
 
+    /**
+     * Stores the phone-notification settings. Returns false, and keeps notifications off,
+     * while the topic or server address is not usable.
+     */
+    private fun savePushSettings(): Boolean {
+        val topic = binding.etPushTopic.text?.toString()?.trim().orEmpty()
+        val server = NtfyPushDispatcher.normalizeServerUrl(binding.etPushServer.text?.toString().orEmpty())
+        val wantsPush = binding.switchPush.isChecked
+        val topicOk = NtfyPushDispatcher.isValidTopic(topic)
+
+        binding.tilPushTopic.error = if (wantsPush && !topicOk) getString(R.string.error_push_topic) else null
+        binding.tilPushServer.error = if (server == null) getString(R.string.error_push_server) else null
+
+        val cur = app.settingsRepository.getSettings()
+        val updated = cur.copy(
+            pushEnabled = wantsPush && topicOk && server != null,
+            pushTopic = if (topicOk) topic else cur.pushTopic,
+            pushServerUrl = server ?: cur.pushServerUrl,
+            pushNotifyKnownPeople = binding.switchPushKnown.isChecked
+        )
+        if (updated != cur) {
+            app.settingsRepository.updateSettings(updated)
+        }
+        return topicOk && server != null
+    }
+
     private fun remoteLinks(): List<String> {
         return try {
             NetworkInterface.getNetworkInterfaces().asSequence()
@@ -362,6 +422,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun persistTextAndSmtpSettings() {
         saveRemotePassword()
+        savePushSettings()
         try {
             val cur = app.settingsRepository.getSettings()
             val webhook = binding.etWebhookUrl.text?.toString()?.trim().let { if (it.isNullOrBlank()) null else it }
@@ -415,7 +476,13 @@ class SettingsActivity : AppCompatActivity() {
                 else -> getString(R.string.test_email_failed, summary.emailResult.errorMessage.orEmpty())
             }
 
-            binding.tvTestAlertResult.text = "$smsInfo\n$emailInfo"
+            val pushInfo = when {
+                summary.pushResult == null -> null
+                summary.pushResult.isSuccess -> getString(R.string.test_push_ok)
+                else -> getString(R.string.test_push_failed, summary.pushResult.errorMessage.orEmpty())
+            }
+
+            binding.tvTestAlertResult.text = listOfNotNull(pushInfo, smsInfo, emailInfo).joinToString("\n")
         }
     }
 

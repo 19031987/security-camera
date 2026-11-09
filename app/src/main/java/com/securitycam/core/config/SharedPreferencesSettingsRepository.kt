@@ -44,6 +44,10 @@ class SharedPreferencesSettingsRepository(
         private const val KEY_REMOTE_VIEW_ENABLED = "pref_remote_view_enabled"
         private const val KEY_REMOTE_VIEW_PASSWORD = "pref_remote_view_password"
         private const val KEY_KNOWN_PEOPLE_ENABLED = "pref_known_people_enabled"
+        private const val KEY_PUSH_ENABLED = "pref_push_enabled"
+        private const val KEY_PUSH_SERVER_URL = "pref_push_server_url"
+        private const val KEY_PUSH_TOPIC = "pref_push_topic"
+        private const val KEY_PUSH_NOTIFY_KNOWN = "pref_push_notify_known"
 
         fun create(context: Context): SharedPreferencesSettingsRepository {
             val sp = context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
@@ -115,7 +119,11 @@ class SharedPreferencesSettingsRepository(
             nightVisionEnabled = prefs.getBoolean(KEY_NIGHT_VISION, true),
             remoteViewEnabled = prefs.getBoolean(KEY_REMOTE_VIEW_ENABLED, false),
             remoteViewPassword = securePrefs.getString(KEY_REMOTE_VIEW_PASSWORD, "") ?: "",
-            knownPeopleEnabled = prefs.getBoolean(KEY_KNOWN_PEOPLE_ENABLED, false)
+            knownPeopleEnabled = prefs.getBoolean(KEY_KNOWN_PEOPLE_ENABLED, false),
+            pushEnabled = prefs.getBoolean(KEY_PUSH_ENABLED, false),
+            pushServerUrl = prefs.getString(KEY_PUSH_SERVER_URL, "https://ntfy.sh") ?: "https://ntfy.sh",
+            pushTopic = securePrefs.getString(KEY_PUSH_TOPIC, "") ?: "",
+            pushNotifyKnownPeople = prefs.getBoolean(KEY_PUSH_NOTIFY_KNOWN, true)
         )
     }
 
@@ -124,6 +132,7 @@ class SharedPreferencesSettingsRepository(
         securePrefs.edit()
             .putString(KEY_SMTP_PASSWORD, settings.smtpPassword)
             .putString(KEY_REMOTE_VIEW_PASSWORD, settings.remoteViewPassword)
+            .putString(KEY_PUSH_TOPIC, settings.pushTopic)
             .apply()
 
         prefs.edit()
@@ -151,6 +160,9 @@ class SharedPreferencesSettingsRepository(
             .putBoolean(KEY_NIGHT_VISION, settings.nightVisionEnabled)
             .putBoolean(KEY_REMOTE_VIEW_ENABLED, settings.remoteViewEnabled)
             .putBoolean(KEY_KNOWN_PEOPLE_ENABLED, settings.knownPeopleEnabled)
+            .putBoolean(KEY_PUSH_ENABLED, settings.pushEnabled)
+            .putString(KEY_PUSH_SERVER_URL, settings.pushServerUrl)
+            .putBoolean(KEY_PUSH_NOTIFY_KNOWN, settings.pushNotifyKnownPeople)
             .apply()
     }
 

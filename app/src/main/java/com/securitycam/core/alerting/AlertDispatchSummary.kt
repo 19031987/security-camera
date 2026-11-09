@@ -10,5 +10,6 @@ data class AlertDispatchSummary(
     val smsResult: DispatchResult?,
     val emailResult: DispatchResult?,
     val localEventSaved: Boolean,
-    val isSuppressedByKnownPerson: Boolean = false
+    val isSuppressedByKnownPerson: Boolean = false,
+    val pushResult: DispatchResult? = null
 )

@@ -32,13 +32,23 @@ class DefaultAlertCoordinator(
     private val smsDispatcher: SmsDispatcher,
     private val emailDispatcher: EmailDispatcher,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val context: Context? = null
+    private val context: Context? = null,
+    private val pushDispatcher: PushDispatcher? = null
 ) : AlertCoordinator {
 
     companion object {
         const val TAG = "DefaultAlertCoordinator"
         const val BURST_DEBOUNCE_MS = 3000L
+
+        /** A household member moving around is announced at most once in this period. */
+        const val KNOWN_PERSON_PUSH_INTERVAL_MS = 10 * 60 * 1000L
     }
+
+    @Volatile
+    private var lastKnownPersonPushAt: Long = 0L
+
+    @Volatile
+    private var lastKnownPersonPushNames: String? = null
 
     @Volatile
     private var lastRecordedEventTimestamp: Long = 0L
@@ -96,7 +106,10 @@ class DefaultAlertCoordinator(
             eventRepository.updateSmsStatus(payload.eventId, MotionEventEntity.STATUS_KNOWN_PERSON)
             eventRepository.updateEmailStatus(payload.eventId, MotionEventEntity.STATUS_KNOWN_PERSON)
 
+            val arrivalPush = sendKnownPersonPush(payload)
+
             return@withContext AlertDispatchSummary(
+                pushResult = arrivalPush,
                 eventId = payload.eventId,
                 isArmed = true,
                 isSuppressedByCooldown = false,
@@ -175,13 +188,24 @@ class DefaultAlertCoordinator(
             )
         }
 
+        var pushResult: DispatchResult? = null
+        if (pushDispatcher != null && settings.pushEnabled && NtfyPushDispatcher.isValidTopic(settings.pushTopic)) {
+            pushResult = pushDispatcher.sendPush(
+                title = "Someone is at your door",
+                message = "Motion detected at $formattedDate.",
+                imageFile = payload.screenshotFile,
+                urgent = true
+            )
+        }
+
         AlertDispatchSummary(
             eventId = payload.eventId,
             isArmed = true,
             isSuppressedByCooldown = false,
             smsResult = smsResult,
             emailResult = emailResult,
-            localEventSaved = true
+            localEventSaved = true,
+            pushResult = pushResult
         )
     }
 
@@ -216,13 +240,53 @@ class DefaultAlertCoordinator(
             emailResult = emailDispatcher.sendEmail(validEmails, subject, html, null)
         }
 
+        var pushResult: DispatchResult? = null
+        if (pushDispatcher != null && settings.pushEnabled && NtfyPushDispatcher.isValidTopic(settings.pushTopic)) {
+            pushResult = pushDispatcher.sendPush(
+                title = "Security Camera test",
+                message = "Phone notifications are working. Sent at $formattedDate.",
+                imageFile = null,
+                urgent = false
+            )
+        }
+
         AlertDispatchSummary(
             eventId = testId,
             isArmed = isArmed(),
             isSuppressedByCooldown = false,
             smsResult = smsResult,
             emailResult = emailResult,
-            localEventSaved = false
+            localEventSaved = false,
+            pushResult = pushResult
+        )
+    }
+
+    /**
+     * Tells the owner that an enrolled household member is home. Sent at normal priority and
+     * at most once per [KNOWN_PERSON_PUSH_INTERVAL_MS] for the same people, because one person
+     * walking about produces many events.
+     */
+    private suspend fun sendKnownPersonPush(payload: AlertPayload): DispatchResult? {
+        val dispatcher = pushDispatcher ?: return null
+        val names = payload.recognizedPeople?.takeIf { it.isNotBlank() } ?: return null
+        val settings = settingsRepository.getSettings()
+        if (!settings.pushEnabled || !settings.pushNotifyKnownPeople ||
+            !NtfyPushDispatcher.isValidTopic(settings.pushTopic)
+        ) {
+            return null
+        }
+        val recentlyAnnounced = names == lastKnownPersonPushNames &&
+            payload.timestamp - lastKnownPersonPushAt < KNOWN_PERSON_PUSH_INTERVAL_MS
+        if (recentlyAnnounced) return null
+
+        lastKnownPersonPushAt = payload.timestamp
+        lastKnownPersonPushNames = names
+        val verb = if (names.contains(",")) "are" else "is"
+        return dispatcher.sendPush(
+            title = "$names $verb home",
+            message = "Recognised at ${dateFormat.format(Date(payload.timestamp))}.",
+            imageFile = payload.screenshotFile,
+            urgent = false
         )
     }
 

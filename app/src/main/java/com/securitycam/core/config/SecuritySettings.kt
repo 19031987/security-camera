@@ -32,5 +32,12 @@ data class SecuritySettings(
     /** Password for the live view page. Kept in encrypted storage, never in plain preferences. */
     val remoteViewPassword: String = "",
     /** Hold alerts briefly and skip them when an enrolled household member is recognised. */
-    val knownPeopleEnabled: Boolean = false
+    val knownPeopleEnabled: Boolean = false,
+    /** Send push notifications to the owner's phone through ntfy. */
+    val pushEnabled: Boolean = false,
+    val pushServerUrl: String = "https://ntfy.sh",
+    /** The ntfy topic. Acts like a password, so it is kept in encrypted storage. */
+    val pushTopic: String = "",
+    /** Also send a (quiet) notification when an enrolled household member is recognised. */
+    val pushNotifyKnownPeople: Boolean = true
 )

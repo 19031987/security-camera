@@ -212,4 +212,22 @@
     <string name="people_privacy">Only a numeric face signature is stored, on this phone. Photos are not kept.</string>
     <string name="event_recognized">Recognised: %1$s</string>
     <string name="cd_back">Back</string>
+    <!-- Phone push notifications -->
+    <string name="pref_category_push">Phone notifications</string>
+    <string name="pref_push_enable_title">Notify my phone</string>
+    <string name="pref_push_enable_summary">Get a notification with the picture when the camera sees someone.</string>
+    <string name="pref_push_steps">On your own phone:\n1. Install the free app \"ntfy\" from the app store.\n2. In ntfy, tap + and subscribe to the topic below.\n3. Tap \"Send test alert\" at the bottom of this screen.</string>
+    <string name="pref_push_topic_title">Topic</string>
+    <string name="pref_push_topic_helper">Keep it private. Anyone who knows it can see your notifications.</string>
+    <string name="error_push_topic">Use 16 to 64 letters, digits, - or _.</string>
+    <string name="action_new_topic">New topic</string>
+    <string name="action_share_topic">Share topic</string>
+    <string name="push_share_text">Security Camera notifications: open the ntfy app and subscribe to this topic: %1$s</string>
+    <string name="pref_push_server_title">Server</string>
+    <string name="error_push_server">Enter an address that starts with https://</string>
+    <string name="pref_push_known_title">Tell me when family arrives</string>
+    <string name="pref_push_known_summary">A quiet notification when someone enrolled under Known people is recognised.</string>
+    <string name="pref_push_note">Notifications and pictures pass through the ntfy server shown above. This camera phone needs an internet connection to send them.</string>
+    <string name="test_push_ok">Phone notification: sent.</string>
+    <string name="test_push_failed">Phone notification: failed. %1$s</string>
 </resources>

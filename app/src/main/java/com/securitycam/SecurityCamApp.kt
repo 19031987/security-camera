@@ -1,5 +1,6 @@
 package com.securitycam
 
+import com.securitycam.core.alerting.NtfyPushDispatcher
 import com.securitycam.core.recognition.FaceAnalyzer
 import com.securitycam.core.recognition.KnownPeopleStore
 import com.securitycam.core.recognition.MlKitFaceAnalyzer
@@ -127,7 +128,13 @@ class SecurityCamApp : Application() {
             cooldownManager = cooldownManager,
             smsDispatcher = smsDispatcher,
             emailDispatcher = emailDispatcher,
-            context = this
+            context = this,
+            pushDispatcher = NtfyPushDispatcher(
+                configProvider = {
+                    val current = settingsRepository.getSettings()
+                    NtfyPushDispatcher.Config(current.pushServerUrl, current.pushTopic)
+                }
+            )
         )
 
         viewerServer = ViewerServer(
