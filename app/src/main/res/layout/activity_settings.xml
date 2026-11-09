@@ -7,26 +7,22 @@
     android:layout_height="match_parent"
     android:background="@color/background">
 
-    <!-- Top Toolbar -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbarSettings"
         android:layout_width="0dp"
-        android:layout_height="?attr/actionBarSize"
-        android:background="@color/surface"
+        android:layout_height="wrap_content"
+        android:minHeight="?attr/actionBarSize"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:navigationIcon="@drawable/ic_arrow_back"
-        app:navigationIconTint="@color/white"
-        app:title="@string/title_settings"
-        app:titleTextColor="@color/white" />
+        app:title="@string/title_settings" />
 
-    <ScrollView
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scrollSettings"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:clipToPadding="false"
-        android:paddingBottom="24dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/toolbarSettings">
@@ -35,501 +31,726 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
-
-            <!-- SECTION 1: SURVEILLANCE & VISION -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/pref_category_surveillance"
-                android:textColor="@color/primary"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+            android:padding="@dimen/space_lg">
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="@color/surface"
-                app:cardCornerRadius="12dp">
+                android:layout_marginBottom="@dimen/space_lg">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="@dimen/space_lg">
 
-                    <!-- Sensitivity Slider -->
-                    <androidx.constraintlayout.widget.ConstraintLayout
+                    <LinearLayout
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="@dimen/section_icon"
+                            android:layout_height="@dimen/section_icon"
+                            android:background="@drawable/bg_section_icon"
+                            android:importantForAccessibility="no"
+                            android:padding="@dimen/space_sm"
+                            android:src="@drawable/ic_visibility"
+                            app:tint="@color/on_primary_container" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/space_md"
+                            android:layout_weight="1"
+                            android:accessibilityHeading="true"
+                            android:text="@string/pref_category_surveillance"
+                            android:textAppearance="@style/TextAppearance.SecurityCam.SectionTitle" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_lg"
+                        android:orientation="horizontal">
 
                         <TextView
                             android:id="@+id/tvSensitivityLabel"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:labelFor="@id/sliderSensitivity"
                             android:text="@string/pref_sensitivity_title"
-                            android:textColor="@color/on_surface"
-                            android:textSize="15sp"
-                            android:textStyle="bold"
-                            app:layout_constraintEnd_toStartOf="@id/tvSensitivityValue"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />
+                            android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                            android:textColor="@color/on_surface" />
 
                         <TextView
                             android:id="@+id/tvSensitivityValue"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
                             android:textColor="@color/primary"
-                            android:textSize="15sp"
-                            android:textStyle="bold"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintTop_toTopOf="parent"
-                            tools:text="50%" />
+                            tools:text="50" />
+                    </LinearLayout>
 
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="@string/pref_sensitivity_summary"
-                            android:textColor="@color/on_surface_muted"
-                            android:textSize="12sp"
-                            app:layout_constraintTop_toBottomOf="@id/tvSensitivityLabel" />
-
-                    </androidx.constraintlayout.widget.ConstraintLayout>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/pref_sensitivity_summary"
+                        android:textAppearance="@style/TextAppearance.SecurityCam.Supporting" />
 
                     <com.google.android.material.slider.Slider
                         android:id="@+id/sliderSensitivity"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:contentDescription="@string/pref_sensitivity_title"
                         android:stepSize="1.0"
                         android:value="50.0"
                         android:valueFrom="1.0"
                         android:valueTo="100.0"
-                        app:thumbColor="@color/primary"
-                        app:trackColorActive="@color/primary" />
+                        app:tickVisible="false" />
 
-                    <!-- Alert Cooldown Slider -->
-                    <androidx.constraintlayout.widget.ConstraintLayout
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp">
+                        android:layout_marginTop="@dimen/space_sm"
+                        android:orientation="horizontal">
 
                         <TextView
                             android:id="@+id/tvCooldownLabel"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:labelFor="@id/sliderCooldown"
                             android:text="@string/pref_cooldown_title"
-                            android:textColor="@color/on_surface"
-                            android:textSize="15sp"
-                            android:textStyle="bold"
-                            app:layout_constraintEnd_toStartOf="@id/tvCooldownValue"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />
+                            android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                            android:textColor="@color/on_surface" />
 
                         <TextView
                             android:id="@+id/tvCooldownValue"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
                             android:textColor="@color/primary"
-                            android:textSize="15sp"
-                            android:textStyle="bold"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintTop_toTopOf="parent"
-                            tools:text="30s" />
+                            tools:text="50" />
+                    </LinearLayout>
 
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="@string/pref_cooldown_summary"
-                            android:textColor="@color/on_surface_muted"
-                            android:textSize="12sp"
-                            app:layout_constraintTop_toBottomOf="@id/tvCooldownLabel" />
-
-                    </androidx.constraintlayout.widget.ConstraintLayout>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/pref_cooldown_summary"
+                        android:textAppearance="@style/TextAppearance.SecurityCam.Supporting" />
 
                     <com.google.android.material.slider.Slider
                         android:id="@+id/sliderCooldown"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:contentDescription="@string/pref_cooldown_title"
                         android:stepSize="5.0"
                         android:value="30.0"
                         android:valueFrom="10.0"
                         android:valueTo="300.0"
-                        app:thumbColor="@color/primary"
-                        app:trackColorActive="@color/primary" />
-
-                    <!-- Low-Light Night Mode Switch -->
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/switchLowLight"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:checked="true"
-                        android:text="@string/pref_night_mode_title"
-                        android:textColor="@color/on_surface"
-                        android:textSize="15sp" />
-
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- SECTION 2: SMS ALERTING & PHONE RECIPIENTS -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/pref_category_sms"
-                android:textColor="@color/primary"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="@color/surface"
-                app:cardCornerRadius="12dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/switchSmsEnabled"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/pref_sms_enable_title"
-                        android:textColor="@color/on_surface"
-                        android:textSize="15sp" />
-
-                    <!-- Recipient Phone Numbers Input & Chips -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:text="@string/pref_sms_recipients_title"
-                        android:textColor="@color/on_surface"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
+                        app:tickVisible="false" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
+                        android:layout_marginTop="@dimen/space_xs"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/touch_target"
                         android:orientation="horizontal">
 
-                        <com.google.android.material.textfield.TextInputLayout
-                            android:id="@+id/tilPhoneInput"
+                        <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_marginEnd="@dimen/space_md"
                             android:layout_weight="1"
-                            android:hint="@string/pref_sms_recipients_hint"
-                            app:boxBackgroundColor="@color/surface_variant"
-                            app:boxStrokeColor="@color/primary"
-                            app:errorEnabled="true">
+                            android:orientation="vertical">
 
-                            <com.google.android.material.textfield.TextInputEditText
-                                android:id="@+id/etPhoneInput"
+                            <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:inputType="phone"
+                                android:labelFor="@id/switchLowLight"
+                                android:text="@string/pref_night_mode_title"
+                                android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
                                 android:textColor="@color/on_surface" />
-                        </com.google.android.material.textfield.TextInputLayout>
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/pref_night_mode_summary"
+                                android:textAppearance="@style/TextAppearance.SecurityCam.Supporting" />
+                        </LinearLayout>
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnAddPhone"
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/switchLowLight"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:layout_marginTop="4dp"
-                            android:text="Add"
-                            app:icon="@drawable/ic_add" />
+                            android:checked="true"
+                            android:contentDescription="@string/pref_night_mode_title" />
                     </LinearLayout>
-
-                    <!-- Phone Recipient Chips -->
-                    <com.google.android.material.chip.ChipGroup
-                        android:id="@+id/chipGroupPhones"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp" />
-
-                    <!-- Webhook Fallback URL -->
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/tilWebhookUrl"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:hint="@string/pref_sms_webhook_url_title"
-                        app:boxBackgroundColor="@color/surface_variant"
-                        app:boxStrokeColor="@color/primary">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etWebhookUrl"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="textUri"
-                            android:textColor="@color/on_surface" />
-                    </com.google.android.material.textfield.TextInputLayout>
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- SECTION 3: EMAIL ALERTING & RECIPIENTS -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/pref_category_email"
-                android:textColor="@color/primary"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="@color/surface"
-                app:cardCornerRadius="12dp">
+                android:layout_marginBottom="@dimen/space_lg">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/switchEmailEnabled"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/pref_email_enable_title"
-                        android:textColor="@color/on_surface"
-                        android:textSize="15sp" />
-
-                    <!-- Recipient Email Input & Chips -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:text="@string/pref_email_recipients_title"
-                        android:textColor="@color/on_surface"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
+                    android:padding="@dimen/space_lg">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
+                        android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <com.google.android.material.textfield.TextInputLayout
-                            android:id="@+id/tilEmailInput"
+                        <ImageView
+                            android:layout_width="@dimen/section_icon"
+                            android:layout_height="@dimen/section_icon"
+                            android:background="@drawable/bg_section_icon"
+                            android:importantForAccessibility="no"
+                            android:padding="@dimen/space_sm"
+                            android:src="@drawable/ic_sms"
+                            app:tint="@color/on_primary_container" />
+
+                        <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/space_md"
                             android:layout_weight="1"
-                            android:hint="@string/pref_email_recipients_hint"
-                            app:boxBackgroundColor="@color/surface_variant"
-                            app:boxStrokeColor="@color/primary"
-                            app:errorEnabled="true">
-
-                            <com.google.android.material.textfield.TextInputEditText
-                                android:id="@+id/etEmailInput"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:inputType="textEmailAddress"
-                                android:textColor="@color/on_surface" />
-                        </com.google.android.material.textfield.TextInputLayout>
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnAddEmail"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:layout_marginTop="4dp"
-                            android:text="Add"
-                            app:icon="@drawable/ic_add" />
+                            android:accessibilityHeading="true"
+                            android:text="@string/pref_category_sms"
+                            android:textAppearance="@style/TextAppearance.SecurityCam.SectionTitle" />
                     </LinearLayout>
 
-                    <!-- Email Recipient Chips -->
-                    <com.google.android.material.chip.ChipGroup
-                        android:id="@+id/chipGroupEmails"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp" />
+                        android:layout_marginTop="@dimen/space_md"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/touch_target"
+                        android:orientation="horizontal">
 
-                    <!-- SMTP Configuration Fields -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:text="SMTP Server Settings"
-                        android:textColor="@color/on_surface"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="@dimen/space_md"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
 
-                    <com.google.android.material.textfield.TextInputLayout
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:labelFor="@id/switchSmsEnabled"
+                                android:text="@string/pref_sms_enable_title"
+                                android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                                android:textColor="@color/on_surface" />
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/pref_sms_enable_summary"
+                                android:textAppearance="@style/TextAppearance.SecurityCam.Supporting" />
+                        </LinearLayout>
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/switchSmsEnabled"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:contentDescription="@string/pref_sms_enable_title" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/groupSmsFields"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:hint="@string/pref_smtp_host_title"
-                        app:boxBackgroundColor="@color/surface_variant">
+                        android:orientation="vertical">
 
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etSmtpHost"
+                        <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:textColor="@color/on_surface" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                            android:layout_marginTop="@dimen/space_md"
+                            android:orientation="horizontal">
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:hint="@string/pref_smtp_port_title"
-                        app:boxBackgroundColor="@color/surface_variant">
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:id="@+id/tilPhoneInput"
+                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:hint="@string/pref_sms_recipients_title">
 
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etSmtpPort"
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/etPhoneInput"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="phone"
+                                    android:maxLines="1" />
+                            </com.google.android.material.textfield.TextInputLayout>
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnAddPhone"
+                                style="@style/Widget.Material3.Button.TonalButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="56dp"
+                                android:layout_marginStart="@dimen/space_sm"
+                                android:layout_marginTop="6dp"
+                                android:text="@string/action_add"
+                                app:icon="@drawable/ic_add" />
+                        </LinearLayout>
+
+                        <com.google.android.material.chip.ChipGroup
+                            android:id="@+id/chipGroupPhones"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="number"
-                            android:textColor="@color/on_surface" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                            android:layout_marginTop="@dimen/space_xs" />
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:hint="@string/pref_smtp_username_title"
-                        app:boxBackgroundColor="@color/surface_variant">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etSmtpUsername"
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilWebhookUrl"
+                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="textEmailAddress"
-                            android:textColor="@color/on_surface" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                            android:layout_marginTop="@dimen/space_md"
+                            android:hint="@string/pref_sms_webhook_url_title"
+                            app:helperText="@string/pref_sms_webhook_helper">
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:hint="@string/pref_smtp_password_title"
-                        app:boxBackgroundColor="@color/surface_variant"
-                        app:passwordToggleEnabled="true">
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etWebhookUrl"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="textUri"
+                                android:maxLines="1" />
+                        </com.google.android.material.textfield.TextInputLayout>
 
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etSmtpPassword"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="textPassword"
-                            android:textColor="@color/on_surface" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:hint="Sender Email Address"
-                        app:boxBackgroundColor="@color/surface_variant">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etSmtpSenderEmail"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="textEmailAddress"
-                            android:textColor="@color/on_surface" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/switchSmtpTls"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:checked="true"
-                        android:text="Use STARTTLS (Port 587)"
-                        android:textColor="@color/on_surface" />
-
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/switchSmtpSsl"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Use Direct SSL (Port 465)"
-                        android:textColor="@color/on_surface" />
+                    </LinearLayout>
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- SECTION 4: DIAGNOSTICS & SYSTEM -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/pref_category_diagnostics"
-                android:textColor="@color/primary"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="@color/surface"
-                app:cardCornerRadius="12dp">
+                android:layout_marginBottom="@dimen/space_lg">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="@dimen/space_lg">
 
-                    <!-- Send Test Alert Button & Progress -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="@dimen/section_icon"
+                            android:layout_height="@dimen/section_icon"
+                            android:background="@drawable/bg_section_icon"
+                            android:importantForAccessibility="no"
+                            android:padding="@dimen/space_sm"
+                            android:src="@drawable/ic_email"
+                            app:tint="@color/on_primary_container" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/space_md"
+                            android:layout_weight="1"
+                            android:accessibilityHeading="true"
+                            android:text="@string/pref_category_email"
+                            android:textAppearance="@style/TextAppearance.SecurityCam.SectionTitle" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_md"
+                        android:gravity="center_vertical"
+                        android:minHeight="@dimen/touch_target"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="@dimen/space_md"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:labelFor="@id/switchEmailEnabled"
+                                android:text="@string/pref_email_enable_title"
+                                android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                                android:textColor="@color/on_surface" />
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/pref_email_enable_summary"
+                                android:textAppearance="@style/TextAppearance.SecurityCam.Supporting" />
+                        </LinearLayout>
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/switchEmailEnabled"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:contentDescription="@string/pref_email_enable_title" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/groupEmailFields"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_md"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.textfield.TextInputLayout
+                                android:id="@+id/tilEmailInput"
+                                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:hint="@string/pref_email_recipients_title">
+
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/etEmailInput"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="textEmailAddress"
+                                    android:maxLines="1" />
+                            </com.google.android.material.textfield.TextInputLayout>
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnAddEmail"
+                                style="@style/Widget.Material3.Button.TonalButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="56dp"
+                                android:layout_marginStart="@dimen/space_sm"
+                                android:layout_marginTop="6dp"
+                                android:text="@string/action_add"
+                                app:icon="@drawable/ic_add" />
+                        </LinearLayout>
+
+                        <com.google.android.material.chip.ChipGroup
+                            android:id="@+id/chipGroupEmails"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_xs" />
+
+                        <LinearLayout
+                            android:id="@+id/rowSmtpAdvanced"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_sm"
+                            android:background="?attr/selectableItemBackground"
+                            android:gravity="center_vertical"
+                            android:minHeight="@dimen/touch_target"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/pref_smtp_advanced"
+                                android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                                android:textColor="@color/on_surface" />
+
+                            <ImageView
+                                android:id="@+id/ivSmtpChevron"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:importantForAccessibility="no"
+                                android:src="@drawable/ic_expand_more"
+                                app:tint="@color/on_surface_muted" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/groupSmtpAdvanced"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:visibility="gone">
+
+                                <com.google.android.material.textfield.TextInputLayout
+                                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/space_md"
+                                    android:hint="@string/pref_smtp_host_title">
+
+                                    <com.google.android.material.textfield.TextInputEditText
+                                        android:id="@+id/etSmtpHost"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="textUri"
+                                        android:maxLines="1" />
+                                </com.google.android.material.textfield.TextInputLayout>
+
+                                <com.google.android.material.textfield.TextInputLayout
+                                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/space_md"
+                                    android:hint="@string/pref_smtp_port_title">
+
+                                    <com.google.android.material.textfield.TextInputEditText
+                                        android:id="@+id/etSmtpPort"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="number"
+                                        android:maxLines="1" />
+                                </com.google.android.material.textfield.TextInputLayout>
+
+                                <com.google.android.material.textfield.TextInputLayout
+                                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/space_md"
+                                    android:hint="@string/pref_smtp_username_title">
+
+                                    <com.google.android.material.textfield.TextInputEditText
+                                        android:id="@+id/etSmtpUsername"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="textEmailAddress"
+                                        android:maxLines="1" />
+                                </com.google.android.material.textfield.TextInputLayout>
+
+                                <com.google.android.material.textfield.TextInputLayout
+                                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/space_md"
+                                    android:hint="@string/pref_smtp_password_title"
+                                    app:endIconMode="password_toggle">
+
+                                    <com.google.android.material.textfield.TextInputEditText
+                                        android:id="@+id/etSmtpPassword"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="textPassword"
+                                        android:maxLines="1" />
+                                </com.google.android.material.textfield.TextInputLayout>
+
+                                <com.google.android.material.textfield.TextInputLayout
+                                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/space_md"
+                                    android:hint="@string/pref_smtp_sender_title">
+
+                                    <com.google.android.material.textfield.TextInputEditText
+                                        android:id="@+id/etSmtpSenderEmail"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="textEmailAddress"
+                                        android:maxLines="1" />
+                                </com.google.android.material.textfield.TextInputLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="@dimen/space_sm"
+                                android:gravity="center_vertical"
+                                android:minHeight="@dimen/touch_target"
+                                android:orientation="horizontal">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="@dimen/space_md"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:labelFor="@id/switchSmtpTls"
+                                        android:text="@string/pref_smtp_tls_title"
+                                        android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                                        android:textColor="@color/on_surface" />
+                                </LinearLayout>
+
+                                <com.google.android.material.materialswitch.MaterialSwitch
+                                    android:id="@+id/switchSmtpTls"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:checked="true"
+                                    android:contentDescription="@string/pref_smtp_tls_title" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="0dp"
+                                android:gravity="center_vertical"
+                                android:minHeight="@dimen/touch_target"
+                                android:orientation="horizontal">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="@dimen/space_md"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:labelFor="@id/switchSmtpSsl"
+                                        android:text="@string/pref_smtp_ssl_title"
+                                        android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                                        android:textColor="@color/on_surface" />
+                                </LinearLayout>
+
+                                <com.google.android.material.materialswitch.MaterialSwitch
+                                    android:id="@+id/switchSmtpSsl"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:contentDescription="@string/pref_smtp_ssl_title" />
+                            </LinearLayout>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_lg">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="@dimen/section_icon"
+                            android:layout_height="@dimen/section_icon"
+                            android:background="@drawable/bg_section_icon"
+                            android:importantForAccessibility="no"
+                            android:padding="@dimen/space_sm"
+                            android:src="@drawable/ic_battery"
+                            app:tint="@color/on_primary_container" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/space_md"
+                            android:layout_weight="1"
+                            android:accessibilityHeading="true"
+                            android:text="@string/pref_category_diagnostics"
+                            android:textAppearance="@style/TextAppearance.SecurityCam.SectionTitle" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_lg"
+                        android:text="@string/action_send_test_alert"
+                        android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                        android:textColor="@color/on_surface" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/test_alert_summary"
+                        android:textAppearance="@style/TextAppearance.SecurityCam.Supporting" />
+
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnSendTestAlert"
+                        style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_sm"
+                        android:minHeight="@dimen/touch_target"
                         android:text="@string/action_send_test_alert"
-                        app:icon="@drawable/ic_send" />
+                        app:icon="@drawable/ic_send"
+                        app:iconGravity="textStart" />
 
-                    <ProgressBar
+                    <com.google.android.material.progressindicator.LinearProgressIndicator
                         android:id="@+id/progressTestAlert"
-                        style="?android:attr/progressBarStyleHorizontal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginTop="@dimen/space_sm"
                         android:indeterminate="true"
                         android:visibility="gone" />
 
-                    <!-- Battery Whitelist Button -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnBatteryWhitelist"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    <TextView
+                        android:id="@+id/tvTestAlertResult"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:text="@string/action_request_battery_whitelist"
+                        android:layout_marginTop="@dimen/space_sm"
+                        android:accessibilityLiveRegion="polite"
+                        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
                         android:textColor="@color/on_surface"
-                        app:strokeColor="@color/card_border" />
+                        android:visibility="gone"
+                        tools:text="SMS: delivered to 1 recipient(s)."
+                        tools:visibility="visible" />
+
+                    <com.google.android.material.divider.MaterialDivider
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_lg" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="@dimen/space_lg"
+                        android:text="@string/action_request_battery_whitelist"
+                        android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                        android:textColor="@color/on_surface" />
+
+                    <TextView
+                        android:id="@+id/tvBatteryStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
                         android:text="@string/battery_whitelist_summary"
-                        android:textColor="@color/on_surface_muted"
-                        android:textSize="12sp" />
+                        android:textAppearance="@style/TextAppearance.SecurityCam.Supporting" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnBatteryWhitelist"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_sm"
+                        android:minHeight="@dimen/touch_target"
+                        android:text="@string/action_request_battery_whitelist" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
+
+    <include
+        android:id="@+id/bottomNav"
+        layout="@layout/view_bottom_nav"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

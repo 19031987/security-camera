@@ -7,157 +7,275 @@
     android:layout_height="match_parent"
     android:background="@color/black">
 
-    <!-- CameraX Fullscreen Preview -->
+    <!-- Camera feed fills the area above the navigation bar -->
     <androidx.camera.view.PreviewView
         android:id="@+id/previewView"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:scaleType="fillCenter" />
 
-    <!-- Live Motion Bounding Box Overlay -->
     <com.securitycam.ui.BoundingBoxOverlayView
         android:id="@+id/boundingBoxOverlay"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toBottomOf="@id/previewView"
+        app:layout_constraintEnd_toEndOf="@id/previewView"
+        app:layout_constraintStart_toStartOf="@id/previewView"
+        app:layout_constraintTop_toTopOf="@id/previewView" />
+
+    <!-- Scrims keep the controls readable over a bright feed -->
+    <View
+        android:layout_width="0dp"
+        android:layout_height="140dp"
+        android:background="@drawable/scrim_top"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Top Status & Quick Action Bar -->
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <View
+        android:layout_width="0dp"
+        android:layout_height="280dp"
+        android:background="@drawable/scrim_bottom"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- Top row: status pill and camera controls -->
+    <LinearLayout
         android:id="@+id/topBar"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:background="#800A0E17"
-        android:paddingHorizontal="16dp"
-        android:paddingVertical="12dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/space_lg"
+        android:paddingVertical="@dimen/space_md"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <!-- Status Badge -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardStatusBadge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:cardBackgroundColor="@color/status_armed_container"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:strokeColor="@color/status_armed"
-            app:strokeWidth="1.5dp">
+            app:cardCornerRadius="999dp"
+            app:strokeWidth="0dp">
 
-            <TextView
-                android:id="@+id/tvStatusBadge"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="6dp"
-                android:text="@string/status_armed"
-                android:textAppearance="@style/TextAppearance.SecurityCam.Badge"
-                android:textColor="@color/status_armed" />
+                android:gravity="center_vertical"
+                android:minHeight="36dp"
+                android:orientation="horizontal"
+                android:paddingHorizontal="@dimen/space_md">
+
+                <View
+                    android:id="@+id/viewStatusDot"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/bg_status_dot"
+                    android:backgroundTint="@color/status_armed" />
+
+                <TextView
+                    android:id="@+id/tvStatusBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_sm"
+                    android:text="@string/status_armed"
+                    android:textAppearance="@style/TextAppearance.SecurityCam.Badge"
+                    android:textColor="@color/status_armed" />
+            </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Switch Lens Action -->
-        <ImageButton
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSwitchCamera"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_marginEnd="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            style="@style/Widget.SecurityCam.OverlayIconButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:contentDescription="@string/action_switch_camera"
-            android:src="@drawable/ic_camera_flip"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/btnToggleTorch"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:icon="@drawable/ic_camera_flip" />
 
-        <!-- Torch Action -->
-        <ImageButton
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnToggleTorch"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_marginEnd="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            style="@style/Widget.SecurityCam.OverlayIconButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_sm"
             android:contentDescription="@string/action_torch_toggle"
-            android:src="@drawable/ic_flash_off"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/btnHistory"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:icon="@drawable/ic_flash_off" />
+    </LinearLayout>
 
-        <!-- Event History Action -->
-        <ImageButton
-            android:id="@+id/btnHistory"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_marginEnd="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/title_event_history"
-            android:src="@drawable/ic_history"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/btnSettings"
-            app:layout_constraintTop_toTopOf="parent" />
+    <!-- Shown instead of the feed when camera access is denied -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardPermission"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="@dimen/space_xl"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/bottomControls"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/topBar"
+        tools:visibility="visible">
 
-        <!-- Settings Action -->
-        <ImageButton
-            android:id="@+id/btnSettings"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/title_settings"
-            android:src="@drawable/ic_settings"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="@dimen/space_xl">
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_videocam"
+                app:tint="@color/on_surface_muted" />
 
-    <!-- Bottom Controls & Arm/Disarm FAB -->
-    <androidx.constraintlayout.widget.ConstraintLayout
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_md"
+                android:text="@string/permission_camera_title"
+                android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_xs"
+                android:gravity="center"
+                android:text="@string/permission_camera_rationale"
+                android:textAppearance="@style/TextAppearance.SecurityCam.Supporting" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnGrantPermission"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_lg"
+                android:text="@string/permission_button_grant" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnOpenAppSettings"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/permission_button_settings" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Control panel -->
+    <com.google.android.material.card.MaterialCardView
         android:id="@+id/bottomControls"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:background="#990A0E17"
-        android:paddingHorizontal="24dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="24dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginHorizontal="@dimen/space_md"
+        android:layout_marginBottom="@dimen/space_md"
+        app:cardBackgroundColor="@color/panel_scrim"
+        app:cardCornerRadius="@dimen/radius_lg"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
-        <TextView
-            android:id="@+id/tvDetectionStatus"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="@string/status_monitoring_active"
-            android:textColor="@color/on_surface"
-            android:textSize="14sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:orientation="vertical"
+            android:padding="@dimen/space_lg">
 
-        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-            android:id="@+id/fabArmDisarm"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/action_disarm"
-            android:textColor="@color/white"
-            app:backgroundTint="@color/status_alert"
-            app:icon="@drawable/ic_shield_armed"
-            app:iconTint="@color/white"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvDetectionStatus" />
+            <TextView
+                android:id="@+id/tvDetectionStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:accessibilityLiveRegion="polite"
+                android:gravity="center"
+                android:text="@string/status_monitoring_active"
+                android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                android:textColor="@color/on_surface" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/fabArmDisarm"
+                style="@style/Widget.SecurityCam.PrimaryAction"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_md"
+                android:text="@string/action_disarm"
+                app:icon="@drawable/ic_shield_armed" />
+
+            <com.google.android.material.divider.MaterialDivider
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_md" />
+
+            <!-- Latest event shortcut -->
+            <LinearLayout
+                android:id="@+id/rowLatestEvent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_sm"
+                android:background="?attr/selectableItemBackground"
+                android:contentDescription="@string/cd_latest_event"
+                android:gravity="center_vertical"
+                android:minHeight="56dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/ivLatestThumb"
+                    android:layout_width="64dp"
+                    android:layout_height="48dp"
+                    android:background="@drawable/thumbnail_placeholder"
+                    android:importantForAccessibility="no"
+                    android:scaleType="centerCrop"
+                    app:shapeAppearance="@style/ShapeAppearance.SecurityCam.Thumbnail" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_md"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvLatestTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/latest_event_none_title"
+                        android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                        android:textColor="@color/on_surface" />
+
+                    <TextView
+                        android:id="@+id/tvLatestSubtitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/latest_event_none_subtitle"
+                        android:textAppearance="@style/TextAppearance.SecurityCam.Supporting" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/on_surface_muted" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <include
+        android:id="@+id/bottomNav"
+        layout="@layout/view_bottom_nav"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -4,20 +4,27 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.widget.Toast
+import android.provider.Settings
+import android.view.View
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import coil.load
 import com.securitycam.R
+import com.securitycam.SecurityCamApp
+import com.securitycam.core.storage.MotionEventEntity
 import com.securitycam.databinding.ActivityMainBinding
 import com.securitycam.service.SurveillanceLiveState
 import com.securitycam.service.SurveillanceService
 import kotlinx.coroutines.launch
+import java.io.File
 
 /**
  * Live Camera Preview & Surveillance Management UI.
@@ -30,27 +37,35 @@ class MainActivity : AppCompatActivity() {
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val cameraGranted = permissions[Manifest.permission.CAMERA] ?: false
-        if (cameraGranted) {
+    ) {
+        // Other permissions (notifications, SMS) are optional; only the camera gates the feed.
+        if (hasCameraPermission()) {
             startSurveillanceAndAttachPreview()
-        } else {
-            Toast.makeText(this, R.string.permission_camera_rationale, Toast.LENGTH_LONG).show()
         }
+        updatePermissionCard()
+        updateUiState(SurveillanceService.liveState.value)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        binding.topBar.padTopForSystemBars()
+        BottomNav.setup(this, binding.bottomNav.root, R.id.nav_live)
+
         setupClickListeners()
         observeSurveillanceState()
+        observeLatestEvent()
         checkAndRequestPermissions()
     }
 
     override fun onResume() {
         super.onResume()
+        binding.bottomNav.root.menu.findItem(R.id.nav_live).isChecked = true
+        updatePermissionCard()
+        updateUiState(SurveillanceService.liveState.value)
         if (hasCameraPermission()) {
             startSurveillanceAndAttachPreview()
         }
@@ -93,6 +108,16 @@ class MainActivity : AppCompatActivity() {
         SurveillanceService.activeSurfaceProvider = binding.previewView.surfaceProvider
     }
 
+    private fun updatePermissionCard() {
+        val granted = hasCameraPermission()
+        binding.cardPermission.visibility = if (granted) View.GONE else View.VISIBLE
+        binding.fabArmDisarm.isEnabled = granted
+        binding.btnSwitchCamera.isEnabled = granted
+        if (!granted) {
+            binding.btnToggleTorch.isEnabled = false
+        }
+    }
+
     private fun setupClickListeners() {
         binding.fabArmDisarm.setOnClickListener {
             SurveillanceService.toggleArm(this)
@@ -106,12 +131,20 @@ class MainActivity : AppCompatActivity() {
             SurveillanceService.toggleTorch(this)
         }
 
-        binding.btnHistory.setOnClickListener {
+        binding.rowLatestEvent.setOnClickListener {
             startActivity(Intent(this, EventHistoryActivity::class.java))
         }
 
-        binding.btnSettings.setOnClickListener {
-            startActivity(Intent(this, SettingsActivity::class.java))
+        binding.btnGrantPermission.setOnClickListener {
+            permissionLauncher.launch(arrayOf(Manifest.permission.CAMERA))
+        }
+
+        binding.btnOpenAppSettings.setOnClickListener {
+            startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", packageName, null)
+                }
+            )
         }
     }
 
@@ -125,62 +158,126 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateUiState(state: SurveillanceLiveState) {
-        // 1. Arm / Disarm Visuals
-        if (state.isArmed) {
-            binding.cardStatusBadge.setCardBackgroundColor(
-                ContextCompat.getColor(this, R.color.status_armed_container)
-            )
-            binding.cardStatusBadge.strokeColor = ContextCompat.getColor(this, R.color.status_armed)
-            binding.tvStatusBadge.text = getString(R.string.status_armed)
-            binding.tvStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.status_armed))
+    private fun observeLatestEvent() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                SecurityCamApp.getInstance().eventRepository.observeEvents().collect { events ->
+                    updateLatestEvent(events)
+                }
+            }
+        }
+    }
 
-            binding.fabArmDisarm.text = getString(R.string.action_disarm)
-            binding.fabArmDisarm.setIconResource(R.drawable.ic_shield_armed)
-            binding.fabArmDisarm.backgroundTintList = ColorStateList.valueOf(
-                ContextCompat.getColor(this, R.color.status_alert)
-            )
-        } else {
-            binding.cardStatusBadge.setCardBackgroundColor(
-                ContextCompat.getColor(this, R.color.status_disarmed_container)
-            )
-            binding.cardStatusBadge.strokeColor = ContextCompat.getColor(this, R.color.status_disarmed)
-            binding.tvStatusBadge.text = getString(R.string.status_disarmed)
-            binding.tvStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.status_disarmed))
-
-            binding.fabArmDisarm.text = getString(R.string.action_arm)
-            binding.fabArmDisarm.setIconResource(R.drawable.ic_shield_disarmed)
-            binding.fabArmDisarm.backgroundTintList = ColorStateList.valueOf(
-                ContextCompat.getColor(this, R.color.status_armed)
-            )
+    private fun updateLatestEvent(events: List<MotionEventEntity>) {
+        val latest = events.maxByOrNull { it.timestamp }
+        if (latest == null) {
+            binding.ivLatestThumb.setImageDrawable(null)
+            binding.tvLatestTitle.setText(R.string.latest_event_none_title)
+            binding.tvLatestSubtitle.setText(R.string.latest_event_none_subtitle)
+            return
         }
 
-        // 2. Torch button state
+        binding.ivLatestThumb.load(File(latest.imagePath)) {
+            crossfade(true)
+            error(R.drawable.thumbnail_placeholder)
+        }
+
+        val now = System.currentTimeMillis()
+        val isToday = EventGrouping.dayKind(EventGrouping.startOfDay(latest.timestamp), now) ==
+            EventGrouping.DayKind.TODAY
+        val whenText = if (isToday) {
+            EventAdapter.formatTime(latest.timestamp)
+        } else {
+            EventAdapter.formatTimestamp(latest.timestamp)
+        }
+        binding.tvLatestTitle.text = getString(R.string.latest_event_title, whenText)
+
+        val todayCount = EventGrouping.countToday(events, now)
+        binding.tvLatestSubtitle.text = if (todayCount == 0) {
+            getString(R.string.events_today_none)
+        } else {
+            resources.getQuantityString(R.plurals.events_today, todayCount, todayCount)
+        }
+    }
+
+    private fun updateUiState(state: SurveillanceLiveState) {
+        val motionResult = state.motionResult
+        val isMotion = motionResult != null && motionResult.isMotionDetected
+
+        // 1. Status pill
+        val (pillText, pillColor, pillContainer) = when {
+            isMotion && state.isArmed -> Triple(
+                R.string.status_motion_detected, R.color.status_alert, R.color.status_alert_container
+            )
+            state.isArmed -> Triple(
+                R.string.status_armed, R.color.status_armed, R.color.status_armed_container
+            )
+            else -> Triple(
+                R.string.status_disarmed, R.color.status_disarmed, R.color.status_disarmed_container
+            )
+        }
+        val pillTint = ContextCompat.getColor(this, pillColor)
+        binding.cardStatusBadge.setCardBackgroundColor(ContextCompat.getColor(this, pillContainer))
+        binding.viewStatusDot.backgroundTintList = ColorStateList.valueOf(pillTint)
+        binding.tvStatusBadge.setText(pillText)
+        binding.tvStatusBadge.setTextColor(pillTint)
+
+        // 2. Arm / disarm button. Arming is the highlighted action; disarming is deliberately quieter.
+        if (state.isArmed) {
+            binding.fabArmDisarm.setText(R.string.action_disarm)
+            binding.fabArmDisarm.setIconResource(R.drawable.ic_shield_disarmed)
+            styleArmButton(R.color.surface_container_highest, R.color.on_surface)
+        } else {
+            binding.fabArmDisarm.setText(R.string.action_arm)
+            binding.fabArmDisarm.setIconResource(R.drawable.ic_shield_armed)
+            styleArmButton(R.color.primary, R.color.on_primary)
+        }
+
+        // 3. Torch is only available on the back camera
         val isFrontCamera = state.cameraFacing == "FRONT"
-        binding.btnToggleTorch.isEnabled = !isFrontCamera
-        binding.btnToggleTorch.alpha = if (isFrontCamera) 0.35f else 1.0f
-        binding.btnToggleTorch.setImageResource(
+        binding.btnToggleTorch.isEnabled = !isFrontCamera && hasCameraPermission()
+        binding.btnToggleTorch.setIconResource(
             if (state.isTorchOn) R.drawable.ic_flash_on else R.drawable.ic_flash_off
         )
 
-        // 3. Bounding Box Overlay & Mirroring
-        binding.boundingBoxOverlay.boxes = state.motionResult?.boundingBoxes ?: emptyList()
-        binding.boundingBoxOverlay.motionScore = state.motionResult?.motionScore ?: 0f
+        // 4. Bounding Box Overlay & Mirroring
+        binding.boundingBoxOverlay.boxes = motionResult?.boundingBoxes ?: emptyList()
+        binding.boundingBoxOverlay.motionScore = motionResult?.motionScore ?: 0f
         binding.boundingBoxOverlay.isMirrored = isFrontCamera
         binding.boundingBoxOverlay.isArmed = state.isArmed
 
-        // 4. Status text banner
-        val motionResult = state.motionResult
-        if (motionResult != null && motionResult.isMotionDetected) {
-            val scorePct = (motionResult.motionScore * 100).toInt()
-            binding.tvDetectionStatus.text = "⚠️ MOTION DETECTED ($scorePct%)"
-            binding.tvDetectionStatus.setTextColor(ContextCompat.getColor(this, R.color.status_alert))
-        } else if (state.isArmed) {
-            binding.tvDetectionStatus.text = getString(R.string.status_monitoring_active)
-            binding.tvDetectionStatus.setTextColor(ContextCompat.getColor(this, R.color.on_surface))
-        } else {
-            binding.tvDetectionStatus.text = getString(R.string.status_standby)
-            binding.tvDetectionStatus.setTextColor(ContextCompat.getColor(this, R.color.on_surface_muted))
+        // 5. Status line
+        when {
+            !hasCameraPermission() -> {
+                binding.tvDetectionStatus.setText(R.string.permission_camera_title)
+                binding.tvDetectionStatus.setTextColor(ContextCompat.getColor(this, R.color.on_surface_muted))
+            }
+            isMotion -> {
+                val scorePct = ((motionResult?.motionScore ?: 0f) * 100).toInt()
+                binding.tvDetectionStatus.text =
+                    getString(R.string.status_motion_detected_score, scorePct)
+                binding.tvDetectionStatus.setTextColor(ContextCompat.getColor(this, R.color.status_alert))
+            }
+            !state.isRunning -> {
+                binding.tvDetectionStatus.setText(R.string.status_camera_starting)
+                binding.tvDetectionStatus.setTextColor(ContextCompat.getColor(this, R.color.on_surface_muted))
+            }
+            state.isArmed -> {
+                binding.tvDetectionStatus.setText(R.string.status_monitoring_active)
+                binding.tvDetectionStatus.setTextColor(ContextCompat.getColor(this, R.color.on_surface))
+            }
+            else -> {
+                binding.tvDetectionStatus.setText(R.string.status_standby)
+                binding.tvDetectionStatus.setTextColor(ContextCompat.getColor(this, R.color.on_surface_muted))
+            }
         }
+    }
+
+    private fun styleArmButton(backgroundColor: Int, contentColor: Int) {
+        val content = ColorStateList.valueOf(ContextCompat.getColor(this, contentColor))
+        binding.fabArmDisarm.backgroundTintList =
+            ColorStateList.valueOf(ContextCompat.getColor(this, backgroundColor))
+        binding.fabArmDisarm.setTextColor(content)
+        binding.fabArmDisarm.iconTint = content
     }
 }
