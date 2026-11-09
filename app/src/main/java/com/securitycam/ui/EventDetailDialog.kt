@@ -56,7 +56,12 @@ class EventDetailDialog : BottomSheetDialogFragment() {
         // 2. Metadata text
         val timestampText = EventAdapter.formatTimestamp(currentEvent.timestamp)
         binding.tvDetailTimestamp.text = timestampText
-        binding.tvDetailMotionScore.text = EventAdapter.formatMotionScore(currentEvent.motionScore)
+        val detected = currentEvent.detectedLabel
+        binding.tvDetailMotionScore.text = if (detected.isNullOrBlank()) {
+            EventAdapter.formatMotionScore(currentEvent.motionScore)
+        } else {
+            "$detected · ${EventAdapter.formatMotionScore(currentEvent.motionScore)}"
+        }
         binding.tvDetailEventId.text = getString(R.string.event_detail_id, currentEvent.id)
 
         val recognized = currentEvent.recognizedPerson

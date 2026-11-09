@@ -32,5 +32,11 @@ data class SecuritySettings(
     /** Password for the live view page. Kept in encrypted storage, never in plain preferences. */
     val remoteViewPassword: String = "",
     /** Hold alerts briefly and skip them when an enrolled household member is recognised. */
-    val knownPeopleEnabled: Boolean = false
+    val knownPeopleEnabled: Boolean = false,
+    /** Send SMS alerts as picture messages (MMS); falls back to text if that fails. */
+    val smsSendPicture: Boolean = true,
+    /** Upload each alert picture to the owner's Google Drive. */
+    val driveEnabled: Boolean = false,
+    /** Id of the "Security Camera" folder in Drive, remembered after the first upload. */
+    val driveFolderId: String = ""
 )

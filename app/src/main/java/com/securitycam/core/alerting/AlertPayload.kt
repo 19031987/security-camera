@@ -15,5 +15,7 @@ data class AlertPayload(
     /** Names of enrolled household members recognised in this event, if any. */
     val recognizedPeople: String? = null,
     /** True when the event is recorded but must not send an alert (a known person was recognised). */
-    val suppressAlert: Boolean = false
+    val suppressAlert: Boolean = false,
+    /** What the on-device model saw moving, e.g. "Person" or "Animal (dog)"; null when unsure. */
+    val detectedLabel: String? = null
 )

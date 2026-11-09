@@ -44,6 +44,9 @@ class SharedPreferencesSettingsRepository(
         private const val KEY_REMOTE_VIEW_ENABLED = "pref_remote_view_enabled"
         private const val KEY_REMOTE_VIEW_PASSWORD = "pref_remote_view_password"
         private const val KEY_KNOWN_PEOPLE_ENABLED = "pref_known_people_enabled"
+        private const val KEY_SMS_SEND_PICTURE = "pref_sms_send_picture"
+        private const val KEY_DRIVE_ENABLED = "pref_drive_enabled"
+        private const val KEY_DRIVE_FOLDER_ID = "pref_drive_folder_id"
 
         fun create(context: Context): SharedPreferencesSettingsRepository {
             val sp = context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
@@ -115,7 +118,10 @@ class SharedPreferencesSettingsRepository(
             nightVisionEnabled = prefs.getBoolean(KEY_NIGHT_VISION, true),
             remoteViewEnabled = prefs.getBoolean(KEY_REMOTE_VIEW_ENABLED, false),
             remoteViewPassword = securePrefs.getString(KEY_REMOTE_VIEW_PASSWORD, "") ?: "",
-            knownPeopleEnabled = prefs.getBoolean(KEY_KNOWN_PEOPLE_ENABLED, false)
+            knownPeopleEnabled = prefs.getBoolean(KEY_KNOWN_PEOPLE_ENABLED, false),
+            smsSendPicture = prefs.getBoolean(KEY_SMS_SEND_PICTURE, true),
+            driveEnabled = prefs.getBoolean(KEY_DRIVE_ENABLED, false),
+            driveFolderId = prefs.getString(KEY_DRIVE_FOLDER_ID, "") ?: ""
         )
     }
 
@@ -151,6 +157,9 @@ class SharedPreferencesSettingsRepository(
             .putBoolean(KEY_NIGHT_VISION, settings.nightVisionEnabled)
             .putBoolean(KEY_REMOTE_VIEW_ENABLED, settings.remoteViewEnabled)
             .putBoolean(KEY_KNOWN_PEOPLE_ENABLED, settings.knownPeopleEnabled)
+            .putBoolean(KEY_SMS_SEND_PICTURE, settings.smsSendPicture)
+            .putBoolean(KEY_DRIVE_ENABLED, settings.driveEnabled)
+            .putString(KEY_DRIVE_FOLDER_ID, settings.driveFolderId)
             .apply()
     }
 

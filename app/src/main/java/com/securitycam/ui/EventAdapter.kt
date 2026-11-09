@@ -87,7 +87,12 @@ class EventAdapter(
             binding.tvTimestamp.text = formatTime(item.timestamp)
 
             // 3. Motion score and low-light badge
-            binding.tvMotionScore.text = formatMotionScore(item.motionScore)
+            val detected = item.detectedLabel
+            binding.tvMotionScore.text = if (detected.isNullOrBlank()) {
+                formatMotionScore(item.motionScore)
+            } else {
+                "$detected · ${formatMotionScore(item.motionScore)}"
+            }
             binding.tvLowLight.visibility = if (item.isLowLight) View.VISIBLE else View.GONE
             val recognized = item.recognizedPerson
             binding.tvRecognized.visibility = if (recognized.isNullOrBlank()) View.GONE else View.VISIBLE

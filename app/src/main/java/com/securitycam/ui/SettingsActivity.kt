@@ -16,6 +16,10 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.identity.AuthorizationResult
+import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.material.chip.ChipGroup
 import com.securitycam.core.remote.ViewerServer
 import java.net.Inet4Address
@@ -40,6 +44,19 @@ class SettingsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
     private val app by lazy { SecurityCamApp.getInstance() }
+
+    /** Google's own consent screen, shown the first time Drive access is granted. */
+    private val driveConsent = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        try {
+            val authorization = Identity.getAuthorizationClient(this).getAuthorizationResultFromIntent(result.data)
+            onDriveAuthorized(authorization)
+        } catch (e: Exception) {
+            showDriveStatus(getString(R.string.drive_status_failed, e.message.orEmpty()), isError = true)
+            setDriveEnabled(false)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -123,6 +140,13 @@ class SettingsActivity : AppCompatActivity() {
             ViewerServer.isAcceptablePassword(settings.remoteViewPassword)
         binding.groupRemoteFields.visibility = View.VISIBLE
         binding.switchKnownPeople.isChecked = settings.knownPeopleEnabled
+        binding.switchSmsPicture.isChecked = settings.smsSendPicture
+        binding.switchDrive.isChecked = settings.driveEnabled
+        binding.btnDriveConnect.visibility = if (settings.driveEnabled) View.GONE else View.VISIBLE
+        showDriveStatus(
+            getString(if (settings.driveEnabled) R.string.drive_status_connected else R.string.drive_status_off),
+            isError = false
+        )
 
         // 7. Only show a channel's fields while that channel is switched on
         binding.groupSmsFields.visibility = if (settings.smsEnabled) View.VISIBLE else View.GONE
@@ -241,6 +265,22 @@ class SettingsActivity : AppCompatActivity() {
         }
         binding.btnShareRemoteLink.setOnClickListener { shareRemoteLink() }
 
+        // Picture messages
+        binding.switchSmsPicture.setOnCheckedChangeListener { _, isChecked ->
+            val cur = app.settingsRepository.getSettings()
+            app.settingsRepository.updateSettings(cur.copy(smsSendPicture = isChecked))
+        }
+
+        // Google Drive: switching on starts the Google sign-in; it stays on only if that succeeds
+        binding.switchDrive.setOnCheckedChangeListener { button, isChecked ->
+            if (!button.isPressed) return@setOnCheckedChangeListener
+            if (isChecked) connectDrive() else {
+                setDriveEnabled(false)
+                showDriveStatus(getString(R.string.drive_status_off), isError = false)
+            }
+        }
+        binding.btnDriveConnect.setOnClickListener { connectDrive() }
+
         // Known people
         binding.switchKnownPeople.setOnCheckedChangeListener { _, isChecked ->
             val cur = app.settingsRepository.getSettings()
@@ -315,6 +355,57 @@ class SettingsActivity : AppCompatActivity() {
             binding.switchRemoteView.isChecked = false
         }
         updateRemoteViewStatus()
+    }
+
+    private fun connectDrive() {
+        showDriveStatus(getString(R.string.drive_status_checking), isError = false)
+        Identity.getAuthorizationClient(this)
+            .authorize(app.driveAuth.authorizationRequest())
+            .addOnSuccessListener { authorization -> onDriveAuthorized(authorization) }
+            .addOnFailureListener { e ->
+                showDriveStatus(getString(R.string.drive_status_failed, e.message.orEmpty()), isError = true)
+                setDriveEnabled(false)
+            }
+    }
+
+    private fun onDriveAuthorized(authorization: AuthorizationResult) {
+        val pendingIntent = authorization.pendingIntent
+        if (authorization.hasResolution() && pendingIntent != null) {
+            // The owner still has to choose an account or accept on Google's screen.
+            driveConsent.launch(IntentSenderRequest.Builder(pendingIntent.intentSender).build())
+            return
+        }
+        // Permission is granted. Make sure Drive itself answers before reporting success.
+        lifecycleScope.launch {
+            val check = app.driveUploader.checkConnection()
+            if (check.isSuccess) {
+                setDriveEnabled(true)
+                showDriveStatus(getString(R.string.drive_status_connected), isError = false)
+            } else {
+                setDriveEnabled(false)
+                showDriveStatus(getString(R.string.drive_status_failed, check.errorMessage.orEmpty()), isError = true)
+            }
+        }
+    }
+
+    private fun setDriveEnabled(enabled: Boolean) {
+        val cur = app.settingsRepository.getSettings()
+        if (cur.driveEnabled != enabled) {
+            app.settingsRepository.updateSettings(cur.copy(driveEnabled = enabled))
+        }
+        if (binding.switchDrive.isChecked != enabled) {
+            binding.switchDrive.isChecked = enabled
+        }
+        binding.btnDriveConnect.visibility = if (enabled) View.GONE else View.VISIBLE
+    }
+
+    private fun showDriveStatus(message: String, isError: Boolean) {
+        binding.tvDriveStatus.text = message
+        binding.tvDriveStatus.setTextColor(
+            androidx.core.content.ContextCompat.getColor(
+                this, if (isError) R.color.status_disarmed else R.color.on_surface
+            )
+        )
     }
 
     private fun remoteLinks(): List<String> {

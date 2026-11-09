@@ -1,5 +1,10 @@
 package com.securitycam
 
+import com.securitycam.core.alerting.AndroidMmsDispatcher
+import com.securitycam.core.alerting.DriveUploader
+import com.securitycam.core.alerting.GoogleDriveAuth
+import com.securitycam.core.recognition.SceneDetector
+import com.securitycam.core.recognition.TfliteSceneDetector
 import com.securitycam.core.recognition.FaceAnalyzer
 import com.securitycam.core.recognition.KnownPeopleStore
 import com.securitycam.core.recognition.MlKitFaceAnalyzer
@@ -59,6 +64,9 @@ class SecurityCamApp : Application() {
     lateinit var viewerServer: ViewerServer
     lateinit var knownPeopleStore: KnownPeopleStore
     lateinit var faceAnalyzer: FaceAnalyzer
+    lateinit var sceneDetector: SceneDetector
+    lateinit var driveAuth: GoogleDriveAuth
+    lateinit var driveUploader: DriveUploader
 
     companion object {
         const val TAG = "SecurityCamApp"
@@ -121,13 +129,27 @@ class SecurityCamApp : Application() {
         emailDispatcher = JakartaEmailDispatcher(
             settingsProvider = { settingsRepository.getSettings() }
         )
+        driveAuth = GoogleDriveAuth(this)
+        driveUploader = DriveUploader(
+            tokenProvider = { driveAuth.accessTokenOrNull() },
+            folderIdStore = object : DriveUploader.FolderIdStore {
+                override fun get(): String = settingsRepository.getSettings().driveFolderId
+                override fun set(id: String) {
+                    settingsRepository.updateSettings(settingsRepository.getSettings().copy(driveFolderId = id))
+                }
+            }
+        )
+        sceneDetector = TfliteSceneDetector(this)
+
         alertCoordinator = DefaultAlertCoordinator(
             settingsRepository = settingsRepository,
             eventRepository = eventRepository,
             cooldownManager = cooldownManager,
             smsDispatcher = smsDispatcher,
             emailDispatcher = emailDispatcher,
-            context = this
+            context = this,
+            pictureDispatcher = AndroidMmsDispatcher(this),
+            cloudUploader = driveUploader
         )
 
         viewerServer = ViewerServer(

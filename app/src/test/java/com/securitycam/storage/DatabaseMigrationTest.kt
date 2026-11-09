@@ -69,5 +69,32 @@ class DatabaseMigrationTest {
         assertEquals("SENT", event.smsStatus)
         assertEquals("FAILED", event.emailStatus)
         assertNull(event.recognizedPerson)
+        assertNull(event.detectedLabel)
+    }
+
+    @Test
+    fun version2EventsSurviveTheUpgrade() {
+        val path = context.getDatabasePath(AppDatabase.DATABASE_NAME)
+        path.parentFile?.mkdirs()
+        SQLiteDatabase.openOrCreateDatabase(path, null).use { db ->
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `motion_events` (`id` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, " +
+                    "`imagePath` TEXT NOT NULL, `motionScore` REAL NOT NULL, `isLowLight` INTEGER NOT NULL, " +
+                    "`smsStatus` TEXT NOT NULL, `emailStatus` TEXT NOT NULL, `recognizedPerson` TEXT, PRIMARY KEY(`id`))"
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_motion_events_timestamp` ON `motion_events` (`timestamp`)")
+            db.execSQL(
+                "INSERT INTO motion_events (id, timestamp, imagePath, motionScore, isLowLight, smsStatus, emailStatus, recognizedPerson) " +
+                    "VALUES ('v2-event', 1700000000000, '/data/v2.jpg', 0.5, 0, 'KNOWN_PERSON', 'KNOWN_PERSON', 'Asha')"
+            )
+            db.version = 2
+        }
+
+        val events = runBlocking { AppDatabase.getInstance(context).motionEventDao().getAllEvents() }
+
+        assertEquals(1, events.size)
+        assertEquals("v2-event", events[0].id)
+        assertEquals("Asha", events[0].recognizedPerson)
+        assertNull(events[0].detectedLabel)
     }
 }
