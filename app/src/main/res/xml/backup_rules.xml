@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <!-- Include non-sensitive settings and database -->
-    <include domain="sharedpref" path="security_cam_settings.xml" />
+    <!-- Back up ordinary settings and the event database -->
+    <include domain="sharedpref" path="." />
     <include domain="database" path="security_cam.db" />
 
-    <!-- Exclude sensitive credentials shared preferences from plain backup -->
+    <!-- Never back up the files that hold SMTP credentials -->
     <exclude domain="sharedpref" path="security_cam_credentials.xml" />
     <exclude domain="sharedpref" path="security_cam_secure_prefs.xml" />
 </full-backup-content>
