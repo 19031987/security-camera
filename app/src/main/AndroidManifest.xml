@@ -43,6 +43,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
         android:theme="@style/Theme.SecurityCam">
 
         <!-- Auto-restart on Boot Receiver (API 31+ compliant with exported="true") -->
@@ -104,6 +105,23 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.securitycam.ui.MainActivity" />
         </activity>
+
+        <!-- Receiver role: keeps a direct connection to the camera phone and shows its alerts -->
+        <service
+            android:name="com.securitycam.service.ReceiverService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps a direct local connection to the owner's own security camera phone to deliver its motion alerts" />
+        </service>
+
+        <activity
+            android:name="com.securitycam.ui.ReceiverActivity"
+            android:exported="false"
+            android:label="@string/title_receiver"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="stateHidden" />
 
         <!-- Enrolment of household members for known-people recognition -->
         <activity

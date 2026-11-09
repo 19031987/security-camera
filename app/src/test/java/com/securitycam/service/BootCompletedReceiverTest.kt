@@ -71,4 +71,32 @@ class BootCompletedReceiverTest {
         val startedServiceIntent = shadowOf(app).nextStartedService
         assertNull("SurveillanceService must not be started on unrelated broadcast", startedServiceIntent)
     }
+
+    @Test
+    fun testBootCompleted_onReceiverPhone_startsReceiverNotTheCamera() {
+        val repo = SharedPreferencesSettingsRepository.create(context)
+        repo.setArmed(true)
+        repo.updateSettings(
+            repo.getSettings().copy(deviceRole = "RECEIVER", receiverEnabled = true)
+        )
+
+        receiver.onReceive(context, Intent(Intent.ACTION_BOOT_COMPLETED))
+
+        val started = shadowOf(context as Application).nextStartedService
+        assertNotNull("ReceiverService must be started on a receiver phone", started)
+        assertEquals("com.securitycam.service.ReceiverService", started.component?.className)
+    }
+
+    @Test
+    fun testBootCompleted_onDisconnectedReceiverPhone_startsNothing() {
+        val repo = SharedPreferencesSettingsRepository.create(context)
+        repo.setArmed(true)
+        repo.updateSettings(
+            repo.getSettings().copy(deviceRole = "RECEIVER", receiverEnabled = false)
+        )
+
+        receiver.onReceive(context, Intent(Intent.ACTION_BOOT_COMPLETED))
+
+        assertNull(shadowOf(context as Application).nextStartedService)
+    }
 }

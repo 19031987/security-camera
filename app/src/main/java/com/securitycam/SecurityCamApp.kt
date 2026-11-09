@@ -1,5 +1,7 @@
 package com.securitycam
 
+import com.securitycam.core.remote.AlertEventHub
+import kotlinx.coroutines.runBlocking
 import com.securitycam.core.recognition.FaceAnalyzer
 import com.securitycam.core.recognition.KnownPeopleStore
 import com.securitycam.core.recognition.MlKitFaceAnalyzer
@@ -56,6 +58,9 @@ class SecurityCamApp : Application() {
 
     /** Newest camera frame for the live web viewer and for face enrolment. */
     val frameHub = FrameHub()
+
+    /** Recent alerts, collected by receiver phones through [viewerServer]. */
+    val alertEventHub = AlertEventHub()
     lateinit var viewerServer: ViewerServer
     lateinit var knownPeopleStore: KnownPeopleStore
     lateinit var faceAnalyzer: FaceAnalyzer
@@ -127,7 +132,8 @@ class SecurityCamApp : Application() {
             cooldownManager = cooldownManager,
             smsDispatcher = smsDispatcher,
             emailDispatcher = emailDispatcher,
-            context = this
+            context = this,
+            alertEventHub = alertEventHub
         )
 
         viewerServer = ViewerServer(
@@ -137,6 +143,11 @@ class SecurityCamApp : Application() {
                 val state = SurveillanceService.liveState.value
                 "{\"running\":${state.isRunning},\"armed\":${state.isArmed}," +
                     "\"nightVision\":${state.isNightVisionActive}}"
+            },
+            alertEventHub = alertEventHub,
+            eventImageProvider = { eventId ->
+                // Looked up by id in the database, so a request can never name a file directly.
+                runBlocking { eventRepository.getEventById(eventId) }?.let { File(it.imagePath) }
             }
         )
         knownPeopleStore = KnownPeopleStore(File(filesDir, KnownPeopleStore.FILE_NAME))

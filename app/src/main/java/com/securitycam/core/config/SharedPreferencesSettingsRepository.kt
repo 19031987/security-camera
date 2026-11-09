@@ -44,6 +44,10 @@ class SharedPreferencesSettingsRepository(
         private const val KEY_REMOTE_VIEW_ENABLED = "pref_remote_view_enabled"
         private const val KEY_REMOTE_VIEW_PASSWORD = "pref_remote_view_password"
         private const val KEY_KNOWN_PEOPLE_ENABLED = "pref_known_people_enabled"
+        private const val KEY_DEVICE_ROLE = "pref_device_role"
+        private const val KEY_RECEIVER_ADDRESS = "pref_receiver_address"
+        private const val KEY_RECEIVER_PASSWORD = "pref_receiver_password"
+        private const val KEY_RECEIVER_ENABLED = "pref_receiver_enabled"
 
         fun create(context: Context): SharedPreferencesSettingsRepository {
             val sp = context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
@@ -115,7 +119,11 @@ class SharedPreferencesSettingsRepository(
             nightVisionEnabled = prefs.getBoolean(KEY_NIGHT_VISION, true),
             remoteViewEnabled = prefs.getBoolean(KEY_REMOTE_VIEW_ENABLED, false),
             remoteViewPassword = securePrefs.getString(KEY_REMOTE_VIEW_PASSWORD, "") ?: "",
-            knownPeopleEnabled = prefs.getBoolean(KEY_KNOWN_PEOPLE_ENABLED, false)
+            knownPeopleEnabled = prefs.getBoolean(KEY_KNOWN_PEOPLE_ENABLED, false),
+            deviceRole = prefs.getString(KEY_DEVICE_ROLE, "") ?: "",
+            receiverCameraAddress = prefs.getString(KEY_RECEIVER_ADDRESS, "") ?: "",
+            receiverPassword = securePrefs.getString(KEY_RECEIVER_PASSWORD, "") ?: "",
+            receiverEnabled = prefs.getBoolean(KEY_RECEIVER_ENABLED, false)
         )
     }
 
@@ -124,6 +132,7 @@ class SharedPreferencesSettingsRepository(
         securePrefs.edit()
             .putString(KEY_SMTP_PASSWORD, settings.smtpPassword)
             .putString(KEY_REMOTE_VIEW_PASSWORD, settings.remoteViewPassword)
+            .putString(KEY_RECEIVER_PASSWORD, settings.receiverPassword)
             .apply()
 
         prefs.edit()
@@ -151,6 +160,9 @@ class SharedPreferencesSettingsRepository(
             .putBoolean(KEY_NIGHT_VISION, settings.nightVisionEnabled)
             .putBoolean(KEY_REMOTE_VIEW_ENABLED, settings.remoteViewEnabled)
             .putBoolean(KEY_KNOWN_PEOPLE_ENABLED, settings.knownPeopleEnabled)
+            .putString(KEY_DEVICE_ROLE, settings.deviceRole)
+            .putString(KEY_RECEIVER_ADDRESS, settings.receiverCameraAddress)
+            .putBoolean(KEY_RECEIVER_ENABLED, settings.receiverEnabled)
             .apply()
     }
 

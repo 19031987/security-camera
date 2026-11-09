@@ -212,4 +212,36 @@
     <string name="people_privacy">Only a numeric face signature is stored, on this phone. Photos are not kept.</string>
     <string name="event_recognized">Recognised: %1$s</string>
     <string name="cd_back">Back</string>
+    <!-- Camera or receiver -->
+    <string name="role_dialog_title">How will you use this phone?</string>
+    <string name="role_dialog_message">Install this app on both phones. One stays at home as the camera. The other is the phone you carry, which receives its alerts.</string>
+    <string name="role_camera">As the camera</string>
+    <string name="role_receiver">To receive alerts</string>
+
+    <!-- Receiver -->
+    <string name="title_receiver">Receive alerts</string>
+    <string name="receiver_intro">This phone connects straight to your camera phone and shows its alerts. Nothing goes through an outside service.\n\nOn the camera phone, open Settings, then Remote viewing: switch it on, set a password and note the address shown there.</string>
+    <string name="receiver_address_title">Camera address</string>
+    <string name="receiver_address_helper">For example 192.168.1.20:8080</string>
+    <string name="receiver_password_title">Viewing password</string>
+    <string name="error_receiver_address">Enter the address shown on the camera phone.</string>
+    <string name="error_receiver_password">Enter the camera\'s viewing password (at least 8 characters).</string>
+    <string name="action_receiver_connect">Connect</string>
+    <string name="action_receiver_disconnect">Disconnect</string>
+    <string name="action_open_live_view">Open live view</string>
+    <string name="receiver_status_off">Not connected.</string>
+    <string name="receiver_status_connecting">Connecting to the camera…</string>
+    <string name="receiver_status_connected">Connected. Alerts from the camera will appear as notifications.</string>
+    <string name="receiver_status_unreachable">Can\'t reach the camera. Trying again. (%1$s)</string>
+    <string name="receiver_status_wrong_password">The camera didn\'t accept the password. Correct it and connect again.</string>
+    <string name="receiver_status_locked_out">Too many wrong passwords. The camera will accept a new attempt in a few minutes.</string>
+    <string name="receiver_status_bad_address">The camera address isn\'t valid.</string>
+    <string name="receiver_last_alert">Last alert: %1$s (%2$s)</string>
+    <string name="receiver_range_note">This works while your phone can reach the camera phone: on the same Wi-Fi, or through your own route into your home network. Away from home without such a route, alerts wait until you are back in range, and only the newest 20 are kept.</string>
+    <string name="receiver_notifications_off">Notifications are switched off for this app, so alerts can\'t be shown. Allow them in the phone\'s settings.</string>
+    <string name="action_use_as_camera">Use this phone as the camera instead</string>
+    <string name="notification_receiver_title">Security Camera receiver</string>
+    <string name="channel_arrival_name">Family arrivals</string>
+    <string name="channel_arrival_desc">Quiet notifications when a household member is recognised</string>
+    <string name="pref_receiver_hint">To get alerts on another phone, install this app there and choose \"To receive alerts\". It connects with the address and password above.</string>
 </resources>

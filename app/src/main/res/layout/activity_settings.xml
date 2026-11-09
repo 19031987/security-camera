@@ -881,6 +881,13 @@
                             android:layout_marginTop="@dimen/space_md"
                             android:text="@string/pref_remote_note"
                             android:textAppearance="@style/TextAppearance.SecurityCam.Supporting" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_sm"
+                            android:text="@string/pref_receiver_hint"
+                            android:textAppearance="@style/TextAppearance.SecurityCam.Supporting" />
                     </LinearLayout>
 
                 </LinearLayout>

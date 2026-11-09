@@ -1,5 +1,6 @@
 package com.securitycam.core.alerting
 
+import com.securitycam.core.remote.AlertEventHub
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
@@ -32,13 +33,24 @@ class DefaultAlertCoordinator(
     private val smsDispatcher: SmsDispatcher,
     private val emailDispatcher: EmailDispatcher,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val context: Context? = null
+    private val context: Context? = null,
+    /** Alerts published here are collected by receiver phones directly from this phone. */
+    private val alertEventHub: AlertEventHub? = null
 ) : AlertCoordinator {
 
     companion object {
         const val TAG = "DefaultAlertCoordinator"
         const val BURST_DEBOUNCE_MS = 3000L
+
+        /** A household member moving around is announced at most once in this period. */
+        const val ARRIVAL_ANNOUNCE_INTERVAL_MS = 10 * 60 * 1000L
     }
+
+    @Volatile
+    private var lastArrivalAnnouncedAt: Long = 0L
+
+    @Volatile
+    private var lastArrivalNames: String? = null
 
     @Volatile
     private var lastRecordedEventTimestamp: Long = 0L
@@ -95,6 +107,7 @@ class DefaultAlertCoordinator(
         if (payload.suppressAlert) {
             eventRepository.updateSmsStatus(payload.eventId, MotionEventEntity.STATUS_KNOWN_PERSON)
             eventRepository.updateEmailStatus(payload.eventId, MotionEventEntity.STATUS_KNOWN_PERSON)
+            announceArrival(payload)
 
             return@withContext AlertDispatchSummary(
                 eventId = payload.eventId,
@@ -137,6 +150,14 @@ class DefaultAlertCoordinator(
 
         // R6: Post high-priority BigPictureStyle notification to CHANNEL_ALERTS
         postLocalAlertNotification(payload, scorePercent, formattedDate)
+
+        alertEventHub?.publish(
+            type = AlertEventHub.TYPE_ALERT,
+            title = "Someone is at your door",
+            message = "Motion detected at $formattedDate.",
+            time = payload.timestamp,
+            eventId = payload.eventId
+        )
 
         // Step 5: Multi-channel dispatch
         if (settings.smsEnabled && validPhones.isNotEmpty()) {
@@ -223,6 +244,30 @@ class DefaultAlertCoordinator(
             smsResult = smsResult,
             emailResult = emailResult,
             localEventSaved = false
+        )
+    }
+
+    /**
+     * Tells receiver phones that an enrolled household member is home. One person walking
+     * about produces many events, so the same people are announced at most once per
+     * [ARRIVAL_ANNOUNCE_INTERVAL_MS].
+     */
+    private fun announceArrival(payload: AlertPayload) {
+        val hub = alertEventHub ?: return
+        val names = payload.recognizedPeople?.takeIf { it.isNotBlank() } ?: return
+        val recentlyAnnounced = names == lastArrivalNames &&
+            payload.timestamp - lastArrivalAnnouncedAt < ARRIVAL_ANNOUNCE_INTERVAL_MS
+        if (recentlyAnnounced) return
+
+        lastArrivalAnnouncedAt = payload.timestamp
+        lastArrivalNames = names
+        val verb = if (names.contains(",")) "are" else "is"
+        hub.publish(
+            type = AlertEventHub.TYPE_ARRIVAL,
+            title = "$names $verb home",
+            message = "Recognised at ${dateFormat.format(Date(payload.timestamp))}.",
+            time = payload.timestamp,
+            eventId = payload.eventId
         )
     }
 

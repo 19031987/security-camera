@@ -1,12 +1,15 @@
 package com.securitycam.core.remote
 
+import com.google.gson.Gson
 import java.io.BufferedInputStream
+import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketTimeoutException
+import java.net.URLDecoder
 import java.security.MessageDigest
 import java.util.Base64
 import java.util.concurrent.ConcurrentHashMap
@@ -21,6 +24,8 @@ import java.util.concurrent.Semaphore
  *  - `/stream`        live video as motion-JPEG
  *  - `/snapshot.jpg`  a single current frame
  *  - `/status.json`   armed / night-vision state
+ *  - `/events`        recent alerts, for receiver phones (held open until one happens)
+ *  - `/event-image`   the screenshot of one alert
  *
  * Every request must carry the password (HTTP Basic auth; the user name is ignored).
  * An address that keeps sending wrong passwords is locked out for a while.
@@ -33,8 +38,13 @@ class ViewerServer(
     private val frameHub: FrameHub,
     private val passwordProvider: () -> String,
     private val statusJsonProvider: () -> String = { "{}" },
-    private val clock: () -> Long = System::currentTimeMillis
+    private val clock: () -> Long = System::currentTimeMillis,
+    private val alertEventHub: AlertEventHub? = null,
+    /** Looks up the screenshot for a stored event id; returns null for ids it doesn't know. */
+    private val eventImageProvider: (String) -> File? = { null },
+    private val eventWaitMs: Long = EVENT_WAIT_MS
 ) {
+    private val gson = Gson()
     private var serverSocket: ServerSocket? = null
     private var acceptThread: Thread? = null
     private var workers: ExecutorService? = null
@@ -124,6 +134,7 @@ class ViewerServer(
         }
         val method = parts[0]
         val path = parts[1].substringBefore('?')
+        val query = parseQuery(parts[1].substringAfter('?', ""))
 
         var authorization: String? = null
         var headerCount = 0
@@ -166,8 +177,52 @@ class ViewerServer(
             "/status.json" -> respond(output, 200, "OK", "application/json", statusJsonProvider().toByteArray())
             "/snapshot.jpg" -> serveSnapshot(output)
             "/stream" -> serveStream(client, output)
+            "/events" -> serveEvents(client, output, query["after"]?.toLongOrNull() ?: -1L)
+            "/event-image" -> serveEventImage(output, query["id"].orEmpty())
             else -> respond(output, 404, "Not Found", "text/plain", "Not found".toByteArray())
         }
+    }
+
+    private fun serveEvents(client: Socket, output: OutputStream, afterId: Long) {
+        val hub = alertEventHub
+        if (hub == null) {
+            respond(output, 404, "Not Found", "text/plain", "Not found".toByteArray())
+            return
+        }
+        // A negative id means "where are you up to?": answer at once with no events.
+        val events = if (afterId < 0) {
+            emptyList()
+        } else {
+            client.soTimeout = 0
+            hub.await(afterId, eventWaitMs)
+        }
+        val body = gson.toJson(mapOf("latest" to hub.latestId, "events" to events))
+        respond(output, 200, "OK", "application/json; charset=utf-8", body.toByteArray(Charsets.UTF_8))
+    }
+
+    private fun serveEventImage(output: OutputStream, eventId: String) {
+        // The id is only ever used as a lookup key by the provider, never as a file path.
+        val file = if (eventId.isEmpty() || eventId.length > MAX_EVENT_ID_LENGTH) null else eventImageProvider(eventId)
+        if (file == null || !file.isFile || file.length() > MAX_IMAGE_BYTES) {
+            respond(output, 404, "Not Found", "text/plain", "Not found".toByteArray())
+            return
+        }
+        respond(output, 200, "OK", "image/jpeg", file.readBytes())
+    }
+
+    private fun parseQuery(raw: String): Map<String, String> {
+        if (raw.isEmpty()) return emptyMap()
+        val result = HashMap<String, String>()
+        for (pair in raw.split('&')) {
+            val key = pair.substringBefore('=')
+            if (key.isEmpty()) continue
+            result[key] = try {
+                URLDecoder.decode(pair.substringAfter('=', ""), "UTF-8")
+            } catch (_: IllegalArgumentException) {
+                ""
+            }
+        }
+        return result
     }
 
     private fun serveSnapshot(output: OutputStream) {
@@ -318,6 +373,9 @@ class ViewerServer(
         private const val SNAPSHOT_TIMEOUT_MS = 3_000L
         private const val STREAM_WAIT_MS = 5_000L
         private const val STREAM_MAX_IDLE_ROUNDS = 6
+        private const val EVENT_WAIT_MS = 25_000L
+        private const val MAX_EVENT_ID_LENGTH = 64
+        private const val MAX_IMAGE_BYTES = 8L * 1024 * 1024
         private const val BOUNDARY = "securitycamframe"
         private const val NO_CACHE_HEADERS =
             "Cache-Control: no-store, no-cache, must-revalidate\r\nPragma: no-cache\r\n"
