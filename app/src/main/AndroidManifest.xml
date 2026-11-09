@@ -105,6 +105,14 @@
                 android:value="com.securitycam.ui.MainActivity" />
         </activity>
 
+        <!-- Enrolment of household members for known-people recognition -->
+        <activity
+            android:name="com.securitycam.ui.KnownPeopleActivity"
+            android:exported="false"
+            android:label="@string/title_known_people"
+            android:parentActivityName="com.securitycam.ui.SettingsActivity"
+            android:screenOrientation="portrait" />
+
         <!-- FileProvider for Sharing Captured Screenshots -->
         <provider
             android:name="androidx.core.content.FileProvider"

@@ -51,6 +51,17 @@
             android:textColor="@color/primary"
             tools:text="Motion Score: 88%" />
 
+        <TextView
+            android:id="@+id/tvDetailRecognized"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_xs"
+            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+            android:textColor="@color/status_armed"
+            android:visibility="gone"
+            tools:text="Recognised: Asha"
+            tools:visibility="visible" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

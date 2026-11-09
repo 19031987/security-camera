@@ -46,6 +46,21 @@ object BottomNav {
     }
 }
 
+/**
+ * For screens without the bottom bar: pads a scrolling view's bottom by the navigation bar,
+ * or by the keyboard while it is open, so the last field stays reachable.
+ */
+fun View.padBottomForSystemBarsAndKeyboard() {
+    val initialBottom = paddingBottom
+    ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
+        val bottom = insets.getInsets(
+            WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime()
+        ).bottom
+        view.updatePadding(bottom = initialBottom + bottom)
+        insets
+    }
+}
+
 /** Adds the status bar / display cutout height to this view's top padding (edge-to-edge). */
 fun View.padTopForSystemBars() {
     val initialTop = paddingTop

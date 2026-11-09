@@ -40,6 +40,10 @@ class SharedPreferencesSettingsRepository(
         private const val KEY_LOW_LIGHT = "pref_low_light"
         private const val KEY_PATROL_MODE_ENABLED = "pref_patrol_mode_enabled"
         private const val KEY_PATROL_INTERVAL_SECONDS = "pref_patrol_interval_seconds"
+        private const val KEY_NIGHT_VISION = "pref_night_vision"
+        private const val KEY_REMOTE_VIEW_ENABLED = "pref_remote_view_enabled"
+        private const val KEY_REMOTE_VIEW_PASSWORD = "pref_remote_view_password"
+        private const val KEY_KNOWN_PEOPLE_ENABLED = "pref_known_people_enabled"
 
         fun create(context: Context): SharedPreferencesSettingsRepository {
             val sp = context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
@@ -107,7 +111,11 @@ class SharedPreferencesSettingsRepository(
             cameraFacing = prefs.getString(KEY_CAMERA_FACING, "BACK") ?: "BACK",
             lowLightCompensation = prefs.getBoolean(KEY_LOW_LIGHT, true),
             isPatrolModeEnabled = prefs.getBoolean(KEY_PATROL_MODE_ENABLED, false),
-            patrolIntervalSeconds = prefs.getInt(KEY_PATROL_INTERVAL_SECONDS, 30)
+            patrolIntervalSeconds = prefs.getInt(KEY_PATROL_INTERVAL_SECONDS, 30),
+            nightVisionEnabled = prefs.getBoolean(KEY_NIGHT_VISION, true),
+            remoteViewEnabled = prefs.getBoolean(KEY_REMOTE_VIEW_ENABLED, false),
+            remoteViewPassword = securePrefs.getString(KEY_REMOTE_VIEW_PASSWORD, "") ?: "",
+            knownPeopleEnabled = prefs.getBoolean(KEY_KNOWN_PEOPLE_ENABLED, false)
         )
     }
 
@@ -115,6 +123,7 @@ class SharedPreferencesSettingsRepository(
         // Persist password to secure preferences and ensure removed from plaintext prefs
         securePrefs.edit()
             .putString(KEY_SMTP_PASSWORD, settings.smtpPassword)
+            .putString(KEY_REMOTE_VIEW_PASSWORD, settings.remoteViewPassword)
             .apply()
 
         prefs.edit()
@@ -139,6 +148,9 @@ class SharedPreferencesSettingsRepository(
             .putBoolean(KEY_LOW_LIGHT, settings.lowLightCompensation)
             .putBoolean(KEY_PATROL_MODE_ENABLED, settings.isPatrolModeEnabled)
             .putInt(KEY_PATROL_INTERVAL_SECONDS, settings.patrolIntervalSeconds.coerceIn(10, 300))
+            .putBoolean(KEY_NIGHT_VISION, settings.nightVisionEnabled)
+            .putBoolean(KEY_REMOTE_VIEW_ENABLED, settings.remoteViewEnabled)
+            .putBoolean(KEY_KNOWN_PEOPLE_ENABLED, settings.knownPeopleEnabled)
             .apply()
     }
 

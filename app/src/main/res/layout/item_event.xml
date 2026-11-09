@@ -69,6 +69,19 @@
                     tools:visibility="visible" />
             </LinearLayout>
 
+            <TextView
+                android:id="@+id/tvRecognized"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                android:textColor="@color/status_armed"
+                android:visibility="gone"
+                tools:text="Recognised: Asha"
+                tools:visibility="visible" />
+
             <LinearLayout
                 android:id="@+id/layoutChips"
                 android:layout_width="match_parent"

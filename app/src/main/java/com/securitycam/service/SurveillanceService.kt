@@ -8,10 +8,22 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
 import android.graphics.Matrix
+import android.hardware.camera2.CameraCaptureSession
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CaptureRequest
+import android.hardware.camera2.CaptureResult
+import android.hardware.camera2.TotalCaptureResult
 import android.os.Build
 import android.os.PowerManager
 import android.util.Log
+import android.util.Range
 import android.util.Size
+import androidx.annotation.OptIn
+import androidx.camera.camera2.interop.Camera2CameraControl
+import androidx.camera.camera2.interop.Camera2CameraInfo
+import androidx.camera.camera2.interop.Camera2Interop
+import androidx.camera.camera2.interop.CaptureRequestOptions
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -27,8 +39,16 @@ import androidx.lifecycle.lifecycleScope
 import com.securitycam.R
 import com.securitycam.SecurityCamApp
 import com.securitycam.core.alerting.AlertPayload
+import com.securitycam.core.config.SecuritySettings
+import com.securitycam.core.recognition.FaceMatcher
+import com.securitycam.core.recognition.FaceVerdict
+import com.securitycam.core.recognition.PresenceGate
+import com.securitycam.core.remote.ViewerServer
+import com.securitycam.core.surveillance.FrameSampler
+import com.securitycam.core.surveillance.LowLightEnhancer
 import com.securitycam.core.surveillance.LuminanceFrame
 import com.securitycam.core.surveillance.MotionResult
+import com.securitycam.core.surveillance.NightVisionController
 import com.securitycam.core.surveillance.NormalizedRect
 import com.securitycam.ui.MainActivity
 import kotlinx.coroutines.Dispatchers
@@ -39,6 +59,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import java.io.ByteArrayOutputStream
 import java.util.UUID
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -52,7 +75,8 @@ data class SurveillanceLiveState(
     val cameraFacing: String = "BACK",
     val isTorchOn: Boolean = false,
     val motionResult: MotionResult? = null,
-    val lastEventTimestamp: Long = 0L
+    val lastEventTimestamp: Long = 0L,
+    val isNightVisionActive: Boolean = false
 )
 
 /**
@@ -76,9 +100,51 @@ class SurveillanceService : LifecycleService() {
 
     private var patrolJob: Job? = null
 
+    @Volatile
+    private var currentSettings: SecuritySettings = SecuritySettings()
+
+    // Night vision: the sensor's own exposure for the latest frame, and the mode it drives.
+    private val nightVision = NightVisionController()
+    @Volatile
+    private var lastIso: Int? = null
+    @Volatile
+    private var lastExposureTimeNs: Long? = null
+    private var nightBoostApplied = false
+
+    // Live web viewer
+    private var lastStreamFrameAt = 0L
+
+    // Known-people recognition: one capture may be held back while the camera looks for a face.
+    private class Capture(
+        val bitmap: Bitmap,
+        val result: MotionResult,
+        val boxes: List<NormalizedRect>,
+        val timestamp: Long,
+        val isLowLight: Boolean
+    )
+
+    private val presenceGate = PresenceGate()
+    private val gateMutex = Mutex()
+    private var heldCapture: Capture? = null
+    private var holdTimer: Job? = null
+    @Volatile
+    private var isHoldingAlert = false
+
     companion object {
         const val TAG = "SurveillanceService"
         const val SNAPSHOT_BURST_THROTTLE_MS = 3000L // Maximum 1 saved snapshot per 3000ms during continuous motion
+
+        /** While an alert is held waiting for a face, look more often so the hold is used well. */
+        const val SNAPSHOT_HOLD_THROTTLE_MS = 1000L
+
+        /** Frames are captured at this size; motion detection runs on a reduced copy of it. */
+        const val CAPTURE_WIDTH = 640
+        const val CAPTURE_HEIGHT = 480
+        const val ANALYSIS_TARGET_WIDTH = 160
+
+        /** At most one frame per this many milliseconds is encoded for the web viewer. */
+        const val STREAM_FRAME_INTERVAL_MS = 200L
+        const val STREAM_JPEG_QUALITY = 70
 
         // Actions
         const val ACTION_START = "com.securitycam.service.ACTION_START"
@@ -370,9 +436,10 @@ class SurveillanceService : LifecycleService() {
             // 2. ImageAnalysis Use Case (24/7 background motion pipeline)
             val executor = cameraExecutor ?: ContextCompat.getMainExecutor(this)
             imageAnalysis = ImageAnalysis.Builder()
-                .setTargetResolution(Size(160, 120))
+                .setTargetResolution(Size(CAPTURE_WIDTH, CAPTURE_HEIGHT))
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
+                .also { attachExposureListener(it) }
                 .build()
                 .apply {
                     setAnalyzer(executor) { image ->
@@ -381,6 +448,12 @@ class SurveillanceService : LifecycleService() {
                 }
 
             camera = provider.bindToLifecycle(this, cameraSelector, previewUseCase, imageAnalysis)
+            // A freshly bound camera starts in its normal configuration.
+            nightVision.reset()
+            nightBoostApplied = false
+            lastIso = null
+            lastExposureTimeNs = null
+            _liveState.value = _liveState.value.copy(isNightVisionActive = false)
             Log.i(TAG, "CameraX use cases successfully bound to LifecycleService.")
         } catch (e: Exception) {
             Log.w(TAG, "CameraX binding error: ${e.message}")
@@ -396,25 +469,34 @@ class SurveillanceService : LifecycleService() {
             val height = image.height
             val rowStride = plane.rowStride
 
-            val yBytes = ByteArray(width * height)
-            if (rowStride == width) {
-                buffer.get(yBytes)
-            } else {
-                for (row in 0 until height) {
-                    buffer.position(row * rowStride)
-                    buffer.get(yBytes, row * width, width)
-                }
-            }
+            // Motion detection runs on a reduced copy (about 160 px wide) of the luminance plane,
+            // so capturing at a higher resolution doesn't change how the detector behaves.
+            val frame = FrameSampler.sampleLuminance(
+                buffer, width, height, rowStride, timestamp, ANALYSIS_TARGET_WIDTH
+            )
+            val yBytes = frame.data
 
-            val frame = LuminanceFrame(yBytes, width, height, timestamp)
             val result = app.motionDetector.processFrame(frame)
 
-            _liveState.value = _liveState.value.copy(motionResult = result)
+            val averageLuminance = LowLightEnhancer.calculateAverageLuminance(yBytes)
+            val nightVisionEnabled = currentSettings.nightVisionEnabled
+            val nightActive = updateNightVision(averageLuminance, nightVisionEnabled)
+            val brighten = nightVisionEnabled &&
+                averageLuminance < NightVisionController.DIGITAL_BOOST_BELOW_LUMINANCE
+
+            _liveState.value = _liveState.value.copy(
+                motionResult = result,
+                isNightVisionActive = nightActive
+            )
+
+            val isFrontCamera = _liveState.value.cameraFacing.equals("FRONT", ignoreCase = true)
+            publishStreamFrame(image, timestamp, isFrontCamera, brighten)
 
             if (result.isMotionDetected && _liveState.value.isArmed) {
                 val now = timestamp
                 // R1: Throttle frame captures to 1 snapshot per SNAPSHOT_BURST_THROTTLE_MS during continuous motion
-                if (now - lastSnapshotTimestamp >= SNAPSHOT_BURST_THROTTLE_MS) {
+                val throttle = if (isHoldingAlert) SNAPSHOT_HOLD_THROTTLE_MS else SNAPSHOT_BURST_THROTTLE_MS
+                if (now - lastSnapshotTimestamp >= throttle) {
                     lastSnapshotTimestamp = now
                     val rawBitmap = try {
                         image.toBitmap()
@@ -427,10 +509,14 @@ class SurveillanceService : LifecycleService() {
                         } catch (_: Exception) {
                             0
                         }
-                        val isFrontCamera = _liveState.value.cameraFacing.equals("FRONT", ignoreCase = true)
-                        val orientedBitmap = orientBitmap(rawBitmap, rotationDegrees, isFrontCamera)
+                        var orientedBitmap = orientBitmap(rawBitmap, rotationDegrees, isFrontCamera)
+                        if (brighten) {
+                            orientedBitmap = BitmapEnhancer.brighten(orientedBitmap)
+                        }
                         val orientedBoxes = orientBoundingBoxes(result.boundingBoxes, rotationDegrees, isFrontCamera)
-                        onMotionIntrusionDetected(orientedBitmap, result, orientedBoxes, now)
+                        onMotionIntrusionDetected(
+                            Capture(orientedBitmap, result, orientedBoxes, now, result.isLowLight || brighten)
+                        )
                     }
                 }
             }
@@ -438,6 +524,111 @@ class SurveillanceService : LifecycleService() {
             Log.e(TAG, "Error in frame analysis: ${e.message}", e)
         } finally {
             image.close()
+        }
+    }
+
+    /** Encodes the frame for the web viewer, but only while somebody is watching. */
+    private fun publishStreamFrame(
+        image: ImageProxy,
+        timestamp: Long,
+        isFrontCamera: Boolean,
+        brighten: Boolean
+    ) {
+        val hub = app.frameHub
+        if (!hub.hasViewers || timestamp - lastStreamFrameAt < STREAM_FRAME_INTERVAL_MS) return
+        lastStreamFrameAt = timestamp
+        try {
+            val rotationDegrees = image.imageInfo.rotationDegrees
+            var bitmap = orientBitmap(image.toBitmap(), rotationDegrees, isFrontCamera)
+            if (brighten) {
+                bitmap = BitmapEnhancer.brighten(bitmap)
+            }
+            val out = ByteArrayOutputStream(64 * 1024)
+            bitmap.compress(Bitmap.CompressFormat.JPEG, STREAM_JPEG_QUALITY, out)
+            hub.publish(out.toByteArray())
+        } catch (e: Exception) {
+            Log.w(TAG, "Unable to encode frame for the viewer: ${e.message}")
+        }
+    }
+
+    /** Records the ISO and exposure time the sensor used, which is how darkness is measured. */
+    @OptIn(ExperimentalCamera2Interop::class)
+    private fun attachExposureListener(builder: ImageAnalysis.Builder) {
+        try {
+            Camera2Interop.Extender(builder).setSessionCaptureCallback(
+                object : CameraCaptureSession.CaptureCallback() {
+                    override fun onCaptureCompleted(
+                        session: CameraCaptureSession,
+                        request: CaptureRequest,
+                        result: TotalCaptureResult
+                    ) {
+                        lastIso = result.get(CaptureResult.SENSOR_SENSITIVITY)
+                        lastExposureTimeNs = result.get(CaptureResult.SENSOR_EXPOSURE_TIME)
+                    }
+                }
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Exposure metadata unavailable: ${e.message}")
+        }
+    }
+
+    private fun updateNightVision(averageLuminance: Float, enabled: Boolean): Boolean {
+        if (!enabled) {
+            if (nightBoostApplied || nightVision.isActive) {
+                nightVision.reset()
+                applyNightBoost(false)
+            }
+            return false
+        }
+        val brightness = NightVisionController.sceneBrightness(averageLuminance, lastIso, lastExposureTimeNs)
+        val active = nightVision.update(brightness)
+        if (active != nightBoostApplied) {
+            applyNightBoost(active)
+        }
+        return active
+    }
+
+    /**
+     * Night configuration: let auto-exposure use its slowest frame rate, which allows much longer
+     * exposures, and bias exposure up by about one stop. Cleared again when the scene is bright.
+     */
+    @OptIn(ExperimentalCamera2Interop::class)
+    private fun applyNightBoost(active: Boolean) {
+        nightBoostApplied = active
+        val cam = camera ?: return
+        try {
+            val camera2Control = Camera2CameraControl.from(cam.cameraControl)
+            val exposureState = cam.cameraInfo.exposureState
+            if (active) {
+                val ranges: Array<Range<Int>>? = Camera2CameraInfo.from(cam.cameraInfo)
+                    .getCameraCharacteristic(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
+                val slowest = ranges?.minWithOrNull(
+                    compareBy<Range<Int>> { it.lower }.thenByDescending { it.upper }
+                )
+                if (slowest != null) {
+                    camera2Control.setCaptureRequestOptions(
+                        CaptureRequestOptions.Builder()
+                            .setCaptureRequestOption(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, slowest)
+                            .build()
+                    )
+                }
+                if (exposureState.isExposureCompensationSupported) {
+                    val step = exposureState.exposureCompensationStep.toFloat()
+                    if (step > 0f) {
+                        val oneStop = Math.round(1f / step)
+                            .coerceAtMost(exposureState.exposureCompensationRange.upper)
+                        cam.cameraControl.setExposureCompensationIndex(oneStop)
+                    }
+                }
+            } else {
+                camera2Control.clearCaptureRequestOptions()
+                if (exposureState.isExposureCompensationSupported) {
+                    cam.cameraControl.setExposureCompensationIndex(0)
+                }
+            }
+            Log.i(TAG, "Night vision ${if (active) "on" else "off"}")
+        } catch (e: Exception) {
+            Log.w(TAG, "Unable to change night configuration: ${e.message}")
         }
     }
 
@@ -530,27 +721,112 @@ class SurveillanceService : LifecycleService() {
         }
     }
 
-    private fun onMotionIntrusionDetected(
-        bitmap: Bitmap,
-        result: MotionResult,
-        boxes: List<NormalizedRect>,
-        timestamp: Long
-    ) {
+    private fun onMotionIntrusionDetected(capture: Capture) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val screenshotFile = app.imageStorageManager.saveScreenshot(bitmap, timestamp, boxes)
-                val payload = AlertPayload(
-                    eventId = UUID.randomUUID().toString(),
-                    timestamp = timestamp,
-                    motionScore = result.motionScore,
-                    screenshotFile = screenshotFile,
-                    cameraFacing = _liveState.value.cameraFacing
-                )
-                app.alertCoordinator.onMotionDetected(payload)
-                _liveState.value = _liveState.value.copy(lastEventTimestamp = timestamp)
+                gateMutex.withLock { routeCapture(capture) }
             } catch (e: Exception) {
                 Log.e(TAG, "Intrusion capture or alert dispatch failed: ${e.message}", e)
             }
+        }
+    }
+
+    /**
+     * Sends the capture straight to alerting, unless known-people recognition is on, in which
+     * case [PresenceGate] decides between alerting, holding briefly, and staying quiet.
+     */
+    private suspend fun routeCapture(capture: Capture) {
+        val people = if (currentSettings.knownPeopleEnabled) app.knownPeopleStore.current() else emptyList()
+        if (people.isEmpty()) {
+            dispatchCapture(capture, recognizedPeople = null, suppressAlert = false)
+            return
+        }
+
+        // If the analysis fails, treat it as "no face seen": the alert is held, then sent.
+        val embeddings = try {
+            app.faceAnalyzer.analyze(capture.bitmap)
+        } catch (e: Exception) {
+            Log.w(TAG, "Face analysis failed: ${e.message}")
+            null
+        }
+        val verdict = if (embeddings == null) FaceVerdict.NO_FACES else FaceMatcher.verdict(embeddings, people)
+
+        when (val decision = presenceGate.evaluate(capture.timestamp, verdict)) {
+            is PresenceGate.Decision.Alert -> {
+                // Alert with the first picture of this motion if one was being held.
+                val first = takeHeldCapture() ?: capture
+                dispatchCapture(first, recognizedPeople = null, suppressAlert = false)
+            }
+            is PresenceGate.Decision.Hold -> {
+                if (heldCapture == null) {
+                    heldCapture = capture
+                    isHoldingAlert = true
+                    holdTimer = lifecycleScope.launch(Dispatchers.IO) {
+                        delay(presenceGate.holdMs + 250)
+                        gateMutex.withLock {
+                            if (presenceGate.expireHold(System.currentTimeMillis())) {
+                                takeHeldCapture(cancelTimer = false)?.let {
+                                    dispatchCapture(it, recognizedPeople = null, suppressAlert = false)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            is PresenceGate.Decision.Suppress -> {
+                takeHeldCapture()
+                dispatchCapture(
+                    capture,
+                    recognizedPeople = decision.names.joinToString(", ").ifEmpty { null },
+                    suppressAlert = true
+                )
+            }
+        }
+    }
+
+    private fun takeHeldCapture(cancelTimer: Boolean = true): Capture? {
+        val held = heldCapture
+        heldCapture = null
+        isHoldingAlert = false
+        if (cancelTimer) {
+            holdTimer?.cancel()
+        }
+        holdTimer = null
+        return held
+    }
+
+    private suspend fun dispatchCapture(capture: Capture, recognizedPeople: String?, suppressAlert: Boolean) {
+        val screenshotFile = app.imageStorageManager.saveScreenshot(capture.bitmap, capture.timestamp, capture.boxes)
+        val payload = AlertPayload(
+            eventId = UUID.randomUUID().toString(),
+            timestamp = capture.timestamp,
+            motionScore = capture.result.motionScore,
+            screenshotFile = screenshotFile,
+            cameraFacing = _liveState.value.cameraFacing,
+            isLowLight = capture.isLowLight,
+            recognizedPeople = recognizedPeople,
+            suppressAlert = suppressAlert
+        )
+        app.alertCoordinator.onMotionDetected(payload)
+        _liveState.value = _liveState.value.copy(lastEventTimestamp = capture.timestamp)
+    }
+
+    /** Starts or stops the live web viewer to match the settings. */
+    @Synchronized
+    private fun syncViewerServer(settings: SecuritySettings) {
+        val server = app.viewerServer
+        val shouldRun = settings.remoteViewEnabled &&
+            ViewerServer.isAcceptablePassword(settings.remoteViewPassword)
+        try {
+            if (shouldRun && !server.isRunning) {
+                server.start(ViewerServer.DEFAULT_PORT)
+                Log.i(TAG, "Live viewer listening on port ${server.port}")
+            } else if (!shouldRun && server.isRunning) {
+                server.stop()
+                Log.i(TAG, "Live viewer stopped")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Unable to start the live viewer: ${e.message}")
         }
     }
 
@@ -587,6 +863,8 @@ class SurveillanceService : LifecycleService() {
         lifecycleScope.launch {
             try {
                 app.settingsRepository.observeSettings().collect { settings ->
+                    currentSettings = settings
+                    launch(Dispatchers.IO) { syncViewerServer(settings) }
                     _liveState.value = _liveState.value.copy(
                         isArmed = settings.isArmed,
                         cameraFacing = settings.cameraFacing
@@ -602,6 +880,11 @@ class SurveillanceService : LifecycleService() {
     override fun onDestroy() {
         super.onDestroy()
         stopPatrolMode()
+        try {
+            app.viewerServer.stop()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error stopping the live viewer: ${e.message}")
+        }
         activeInstance = null
         activeSurfaceProvider = null
         releaseWakeLock()

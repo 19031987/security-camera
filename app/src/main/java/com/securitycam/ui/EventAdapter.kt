@@ -89,6 +89,9 @@ class EventAdapter(
             // 3. Motion score and low-light badge
             binding.tvMotionScore.text = formatMotionScore(item.motionScore)
             binding.tvLowLight.visibility = if (item.isLowLight) View.VISIBLE else View.GONE
+            val recognized = item.recognizedPerson
+            binding.tvRecognized.visibility = if (recognized.isNullOrBlank()) View.GONE else View.VISIBLE
+            binding.tvRecognized.text = binding.root.context.getString(R.string.event_recognized, recognized.orEmpty())
 
             // 4. Status chips
             applyStatusChip(binding.chipSms, "SMS", item.smsStatus)
@@ -162,6 +165,7 @@ class EventAdapter(
                 MotionEventEntity.STATUS_FAILED -> "$prefix: Failed"
                 MotionEventEntity.STATUS_SUPPRESSED -> "$prefix: Cooldown"
                 MotionEventEntity.STATUS_DISABLED -> "$prefix: Disabled"
+                MotionEventEntity.STATUS_KNOWN_PERSON -> "$prefix: Not sent"
                 else -> "$prefix: $status"
             }
         }
@@ -172,6 +176,7 @@ class EventAdapter(
                 MotionEventEntity.STATUS_FAILED -> 0xFFFF1744.toInt() // Red
                 MotionEventEntity.STATUS_SUPPRESSED -> 0xFFFFAB00.toInt() // Amber
                 MotionEventEntity.STATUS_DISABLED -> 0xFF94A3B8.toInt() // Muted grey
+                MotionEventEntity.STATUS_KNOWN_PERSON -> 0xFF94A3B8.toInt() // Muted grey: nothing went wrong
                 else -> 0xFFFFFFFF.toInt()
             }
         }

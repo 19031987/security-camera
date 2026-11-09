@@ -1,5 +1,11 @@
 package com.securitycam
 
+import com.securitycam.core.recognition.FaceAnalyzer
+import com.securitycam.core.recognition.KnownPeopleStore
+import com.securitycam.core.recognition.MlKitFaceAnalyzer
+import com.securitycam.core.remote.FrameHub
+import com.securitycam.core.remote.ViewerServer
+import com.securitycam.service.SurveillanceService
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -47,6 +53,12 @@ class SecurityCamApp : Application() {
     lateinit var smsDispatcher: SmsDispatcher
     lateinit var emailDispatcher: EmailDispatcher
     lateinit var alertCoordinator: AlertCoordinator
+
+    /** Newest camera frame for the live web viewer and for face enrolment. */
+    val frameHub = FrameHub()
+    lateinit var viewerServer: ViewerServer
+    lateinit var knownPeopleStore: KnownPeopleStore
+    lateinit var faceAnalyzer: FaceAnalyzer
 
     companion object {
         const val TAG = "SecurityCamApp"
@@ -117,6 +129,18 @@ class SecurityCamApp : Application() {
             emailDispatcher = emailDispatcher,
             context = this
         )
+
+        viewerServer = ViewerServer(
+            frameHub = frameHub,
+            passwordProvider = { settingsRepository.getSettings().remoteViewPassword },
+            statusJsonProvider = {
+                val state = SurveillanceService.liveState.value
+                "{\"running\":${state.isRunning},\"armed\":${state.isArmed}," +
+                    "\"nightVision\":${state.isNightVisionActive}}"
+            }
+        )
+        knownPeopleStore = KnownPeopleStore(File(filesDir, KnownPeopleStore.FILE_NAME))
+        faceAnalyzer = MlKitFaceAnalyzer(this)
     }
 
     /**

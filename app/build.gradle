@@ -112,6 +112,10 @@ dependencies {
     // Image Loading - Coil 2.6.0
     implementation 'io.coil-kt:coil:2.6.0'
 
+    // On-device face detection (bundled model) and face-embedding inference
+    implementation 'com.google.mlkit:face-detection:16.1.6'
+    implementation 'org.tensorflow:tensorflow-lite:2.14.0'
+
     // JSON Serialization
     implementation 'com.google.code.gson:gson:2.10.1'
 

@@ -59,6 +59,10 @@ class EventDetailDialog : BottomSheetDialogFragment() {
         binding.tvDetailMotionScore.text = EventAdapter.formatMotionScore(currentEvent.motionScore)
         binding.tvDetailEventId.text = getString(R.string.event_detail_id, currentEvent.id)
 
+        val recognized = currentEvent.recognizedPerson
+        binding.tvDetailRecognized.visibility = if (recognized.isNullOrBlank()) View.GONE else View.VISIBLE
+        binding.tvDetailRecognized.text = getString(R.string.event_recognized, recognized.orEmpty())
+
         // 3. Status chips
         binding.chipDetailSms.text = EventAdapter.formatStatusChipText("SMS", currentEvent.smsStatus)
         binding.chipDetailSms.setTextColor(EventAdapter.getStatusChipColor(currentEvent.smsStatus))

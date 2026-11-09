@@ -162,4 +162,54 @@
     <string name="battery_request_failed">Couldn\'t open the battery setting.</string>
     <string name="value_percent">%1$d%%</string>
     <string name="value_seconds">%1$d s</string>
+    <!-- Night vision -->
+    <string name="pref_night_vision_title">Night vision</string>
+    <string name="pref_night_vision_summary">In the dark, uses longer exposures and brightens pictures automatically.</string>
+    <string name="badge_night_vision">Night vision</string>
+
+    <!-- Live web viewer -->
+    <string name="pref_category_remote">Remote viewing</string>
+    <string name="pref_remote_enable_title">Live view in a browser</string>
+    <string name="pref_remote_enable_summary">Watch the camera from another phone or computer.</string>
+    <string name="pref_remote_password_title">Viewing password</string>
+    <string name="pref_remote_password_helper">At least 8 characters. Any user name works.</string>
+    <string name="error_remote_password_short">Use at least 8 characters.</string>
+    <string name="remote_status_needs_password">Set a password to turn the live view on.</string>
+    <string name="remote_status_no_network">Connect this phone to Wi-Fi to get a link.</string>
+    <string name="remote_status_links">Open on a device on the same network:\n%1$s</string>
+    <string name="action_share_link">Share link</string>
+    <string name="pref_remote_note">The link works on your home Wi-Fi. Away from home, connect both devices to a private network app such as Tailscale and use this phone\'s address from that app. Don\'t open this port on your router: the connection is not encrypted on its own.</string>
+    <string name="remote_share_text">Security Camera live view: %1$s</string>
+
+    <!-- Known people -->
+    <string name="pref_category_people">Known people</string>
+    <string name="pref_people_enable_title">Don\'t alert for people I know</string>
+    <string name="pref_people_enable_summary">Alerts wait a few seconds for a face. No alert is sent if it belongs to someone enrolled.</string>
+    <string name="people_summary_none">Nobody enrolled yet. Alerts are sent as usual.</string>
+    <plurals name="people_summary_count">
+        <item quantity="one">%1$d person enrolled</item>
+        <item quantity="other">%1$d people enrolled</item>
+    </plurals>
+    <string name="action_manage_people">Manage people</string>
+    <string name="title_known_people">Known people</string>
+    <string name="people_intro">Add each person who lives here. Use the camera view for the best match: have them stand where the camera normally sees people and look towards it. Adding a few samples from different angles helps.</string>
+    <string name="people_name_hint">Name</string>
+    <string name="action_enrol_camera">Use camera view</string>
+    <string name="action_enrol_photo">Choose photo</string>
+    <string name="people_error_name">Enter a name first.</string>
+    <string name="people_error_no_frame">The camera isn\'t running. Open the Live tab once, then try again.</string>
+    <string name="people_error_no_face">No clear face found. The face needs to be closer, well lit and looking towards the camera.</string>
+    <string name="people_error_many_faces">More than one face found. Use a picture with only this person.</string>
+    <string name="people_error_failed">Couldn\'t read that picture.</string>
+    <string name="people_working">Looking for a face…</string>
+    <string name="people_added">Added a face sample for %1$s.</string>
+    <string name="people_empty">Nobody enrolled yet.</string>
+    <plurals name="people_samples">
+        <item quantity="one">%1$d face sample</item>
+        <item quantity="other">%1$d face samples</item>
+    </plurals>
+    <string name="action_remove_person">Remove %1$s</string>
+    <string name="people_privacy">Only a numeric face signature is stored, on this phone. Photos are not kept.</string>
+    <string name="event_recognized">Recognised: %1$s</string>
+    <string name="cd_back">Back</string>
 </resources>
