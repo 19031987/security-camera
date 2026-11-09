@@ -33,7 +33,8 @@ class DefaultAlertCoordinator(
     private val emailDispatcher: EmailDispatcher,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val context: Context? = null,
-    private val pushDispatcher: PushDispatcher? = null
+    private val pushDispatcher: PushDispatcher? = null,
+    private val whatsAppDispatcher: WhatsAppDispatcher? = null
 ) : AlertCoordinator {
 
     companion object {
@@ -198,6 +199,14 @@ class DefaultAlertCoordinator(
             )
         }
 
+        var whatsappResult: DispatchResult? = null
+        if (whatsAppDispatcher != null && settings.whatsappEnabled && settings.whatsappContacts.isNotEmpty()) {
+            whatsappResult = whatsAppDispatcher.send(
+                settings.whatsappContacts,
+                "Security Camera: someone is at your door. Motion detected at $formattedDate."
+            )
+        }
+
         AlertDispatchSummary(
             eventId = payload.eventId,
             isArmed = true,
@@ -205,7 +214,8 @@ class DefaultAlertCoordinator(
             smsResult = smsResult,
             emailResult = emailResult,
             localEventSaved = true,
-            pushResult = pushResult
+            pushResult = pushResult,
+            whatsappResult = whatsappResult
         )
     }
 
@@ -250,6 +260,14 @@ class DefaultAlertCoordinator(
             )
         }
 
+        var whatsappResult: DispatchResult? = null
+        if (whatsAppDispatcher != null && settings.whatsappEnabled && settings.whatsappContacts.isNotEmpty()) {
+            whatsappResult = whatsAppDispatcher.send(
+                settings.whatsappContacts,
+                "Security Camera test: WhatsApp alerts are working. Sent at $formattedDate."
+            )
+        }
+
         AlertDispatchSummary(
             eventId = testId,
             isArmed = isArmed(),
@@ -257,7 +275,8 @@ class DefaultAlertCoordinator(
             smsResult = smsResult,
             emailResult = emailResult,
             localEventSaved = false,
-            pushResult = pushResult
+            pushResult = pushResult,
+            whatsappResult = whatsappResult
         )
     }
 

@@ -230,4 +230,18 @@
     <string name="pref_push_note">Notifications and pictures pass through the ntfy server shown above. This camera phone needs an internet connection to send them.</string>
     <string name="test_push_ok">Phone notification: sent.</string>
     <string name="test_push_failed">Phone notification: failed. %1$s</string>
+    <!-- WhatsApp alerts -->
+    <string name="pref_category_whatsapp">WhatsApp alerts</string>
+    <string name="pref_whatsapp_enable_title">Send WhatsApp alerts</string>
+    <string name="pref_whatsapp_enable_summary">Message these contacts on WhatsApp when the camera sees someone.</string>
+    <string name="pref_whatsapp_steps">Each contact does this once, on their own phone:
+1. Open callmebot.com and choose WhatsApp to see the current CallMeBot number.
+2. Send that number this WhatsApp message: I allow callmebot to send me messages
+3. It replies with a key. Enter their number and that key below.</string>
+    <string name="pref_whatsapp_phone_title">WhatsApp number</string>
+    <string name="pref_whatsapp_key_title">Their key</string>
+    <string name="error_whatsapp_key">Enter the key CallMeBot sent to this contact.</string>
+    <string name="pref_whatsapp_note">Text only, no picture. Sent through CallMeBot, a free service not run by WhatsApp; it sees these numbers and the alert text.</string>
+    <string name="test_whatsapp_ok">WhatsApp: sent to %1$d contact(s).</string>
+    <string name="test_whatsapp_failed">WhatsApp: failed. %1$s</string>
 </resources>

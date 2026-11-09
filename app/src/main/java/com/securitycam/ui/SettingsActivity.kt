@@ -17,7 +17,9 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.chip.ChipGroup
+import com.securitycam.core.alerting.CallMeBotWhatsAppDispatcher
 import com.securitycam.core.alerting.NtfyPushDispatcher
+import com.securitycam.core.alerting.WhatsAppContact
 import com.securitycam.core.remote.ViewerServer
 import java.net.Inet4Address
 import java.net.NetworkInterface
@@ -124,6 +126,14 @@ class SettingsActivity : AppCompatActivity() {
             ViewerServer.isAcceptablePassword(settings.remoteViewPassword)
         binding.groupRemoteFields.visibility = View.VISIBLE
         binding.switchKnownPeople.isChecked = settings.knownPeopleEnabled
+
+        // WhatsApp
+        binding.switchWhatsApp.isChecked = settings.whatsappEnabled
+        binding.groupWhatsAppFields.visibility = if (settings.whatsappEnabled) View.VISIBLE else View.GONE
+        binding.chipGroupWhatsApp.removeAllViews()
+        for (contact in settings.whatsappContacts) {
+            addWhatsAppChip(contact)
+        }
 
         // Phone notifications
         binding.etPushTopic.setText(settings.pushTopic)
@@ -275,6 +285,14 @@ class SettingsActivity : AppCompatActivity() {
         binding.etPushTopic.setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) savePushSettings() }
         binding.etPushServer.setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) savePushSettings() }
 
+        // WhatsApp
+        binding.switchWhatsApp.setOnCheckedChangeListener { _, isChecked ->
+            val cur = app.settingsRepository.getSettings()
+            app.settingsRepository.updateSettings(cur.copy(whatsappEnabled = isChecked))
+            binding.groupWhatsAppFields.visibility = if (isChecked) View.VISIBLE else View.GONE
+        }
+        binding.btnAddWhatsApp.setOnClickListener { addWhatsAppContact() }
+
         // Known people
         binding.switchKnownPeople.setOnCheckedChangeListener { _, isChecked ->
             val cur = app.settingsRepository.getSettings()
@@ -316,6 +334,37 @@ class SettingsActivity : AppCompatActivity() {
             val currentEmails = app.settingsRepository.getEmailAddresses().toMutableList()
             currentEmails.remove(email)
             app.settingsRepository.setEmailAddresses(currentEmails)
+        }
+    }
+
+    private fun addWhatsAppContact() {
+        val phone = binding.etWhatsAppPhone.text?.toString()?.trim().orEmpty()
+        val key = binding.etWhatsAppKey.text?.toString()?.trim().orEmpty()
+        val contact = WhatsAppContact(phone, key)
+
+        val phoneOk = RecipientValidator.isValidE164(phone)
+        val keyOk = CallMeBotWhatsAppDispatcher.isValidApiKey(key)
+        binding.tilWhatsAppPhone.error = if (phoneOk) null else getString(R.string.error_invalid_phone)
+        binding.tilWhatsAppKey.error = if (keyOk) null else getString(R.string.error_whatsapp_key)
+        if (!phoneOk || !keyOk || !CallMeBotWhatsAppDispatcher.isValidContact(contact)) return
+
+        val cur = app.settingsRepository.getSettings()
+        // Adding a number again replaces its key.
+        val contacts = cur.whatsappContacts.filter { it.phone != phone } + contact
+        app.settingsRepository.updateSettings(cur.copy(whatsappContacts = contacts))
+
+        binding.chipGroupWhatsApp.removeAllViews()
+        contacts.forEach { addWhatsAppChip(it) }
+        binding.etWhatsAppPhone.text?.clear()
+        binding.etWhatsAppKey.text?.clear()
+    }
+
+    private fun addWhatsAppChip(contact: WhatsAppContact) {
+        addRecipientChip(binding.chipGroupWhatsApp, contact.phone) {
+            val cur = app.settingsRepository.getSettings()
+            app.settingsRepository.updateSettings(
+                cur.copy(whatsappContacts = cur.whatsappContacts.filter { it.phone != contact.phone })
+            )
         }
     }
 
@@ -482,7 +531,15 @@ class SettingsActivity : AppCompatActivity() {
                 else -> getString(R.string.test_push_failed, summary.pushResult.errorMessage.orEmpty())
             }
 
-            binding.tvTestAlertResult.text = listOfNotNull(pushInfo, smsInfo, emailInfo).joinToString("\n")
+            val whatsappInfo = when {
+                summary.whatsappResult == null -> null
+                summary.whatsappResult.isSuccess ->
+                    getString(R.string.test_whatsapp_ok, summary.whatsappResult.deliveredCount)
+                else -> getString(R.string.test_whatsapp_failed, summary.whatsappResult.errorMessage.orEmpty())
+            }
+
+            binding.tvTestAlertResult.text =
+                listOfNotNull(pushInfo, whatsappInfo, smsInfo, emailInfo).joinToString("\n")
         }
     }
 

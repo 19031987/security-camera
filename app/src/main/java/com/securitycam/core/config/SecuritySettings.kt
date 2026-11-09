@@ -1,5 +1,7 @@
 package com.securitycam.core.config
 
+import com.securitycam.core.alerting.WhatsAppContact
+
 /**
  * Immutable configuration snapshot for surveillance parameters, alerting recipients, and SMTP credentials.
  */
@@ -39,5 +41,9 @@ data class SecuritySettings(
     /** The ntfy topic. Acts like a password, so it is kept in encrypted storage. */
     val pushTopic: String = "",
     /** Also send a (quiet) notification when an enrolled household member is recognised. */
-    val pushNotifyKnownPeople: Boolean = true
+    val pushNotifyKnownPeople: Boolean = true,
+    /** Send WhatsApp text alerts through CallMeBot. */
+    val whatsappEnabled: Boolean = false,
+    /** Numbers and their CallMeBot keys. Kept in encrypted storage. */
+    val whatsappContacts: List<WhatsAppContact> = emptyList()
 )

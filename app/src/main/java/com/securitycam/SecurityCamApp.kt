@@ -1,5 +1,6 @@
 package com.securitycam
 
+import com.securitycam.core.alerting.CallMeBotWhatsAppDispatcher
 import com.securitycam.core.alerting.NtfyPushDispatcher
 import com.securitycam.core.recognition.FaceAnalyzer
 import com.securitycam.core.recognition.KnownPeopleStore
@@ -129,6 +130,7 @@ class SecurityCamApp : Application() {
             smsDispatcher = smsDispatcher,
             emailDispatcher = emailDispatcher,
             context = this,
+            whatsAppDispatcher = CallMeBotWhatsAppDispatcher(),
             pushDispatcher = NtfyPushDispatcher(
                 configProvider = {
                     val current = settingsRepository.getSettings()

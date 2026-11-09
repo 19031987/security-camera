@@ -1,5 +1,6 @@
 package com.securitycam.core.config
 
+import com.securitycam.core.alerting.WhatsAppContact
 import android.content.Context
 import android.content.SharedPreferences
 import com.google.gson.Gson
@@ -48,6 +49,8 @@ class SharedPreferencesSettingsRepository(
         private const val KEY_PUSH_SERVER_URL = "pref_push_server_url"
         private const val KEY_PUSH_TOPIC = "pref_push_topic"
         private const val KEY_PUSH_NOTIFY_KNOWN = "pref_push_notify_known"
+        private const val KEY_WHATSAPP_ENABLED = "pref_whatsapp_enabled"
+        private const val KEY_WHATSAPP_CONTACTS = "pref_whatsapp_contacts"
 
         fun create(context: Context): SharedPreferencesSettingsRepository {
             val sp = context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
@@ -57,6 +60,22 @@ class SharedPreferencesSettingsRepository(
     }
 
     private val stringListType = object : TypeToken<List<String>>() {}.type
+    private val whatsappContactListType = object : TypeToken<List<WhatsAppContact>>() {}.type
+
+    private fun readWhatsAppContacts(): List<WhatsAppContact> {
+        val json = securePrefs.getString(KEY_WHATSAPP_CONTACTS, null)
+        if (json.isNullOrBlank()) return emptyList()
+        return try {
+            val parsed: List<WhatsAppContact>? = gson.fromJson(json, whatsappContactListType)
+            // Gson can leave fields null when they are missing from the stored text.
+            parsed.orEmpty().filter { contact ->
+                @Suppress("SENSELESS_COMPARISON")
+                contact != null && contact.phone != null && contact.apiKey != null
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 
     override fun getSettings(): SecuritySettings {
         val phonesJson = prefs.getString(KEY_PHONE_NUMBERS, null)
@@ -123,7 +142,9 @@ class SharedPreferencesSettingsRepository(
             pushEnabled = prefs.getBoolean(KEY_PUSH_ENABLED, false),
             pushServerUrl = prefs.getString(KEY_PUSH_SERVER_URL, "https://ntfy.sh") ?: "https://ntfy.sh",
             pushTopic = securePrefs.getString(KEY_PUSH_TOPIC, "") ?: "",
-            pushNotifyKnownPeople = prefs.getBoolean(KEY_PUSH_NOTIFY_KNOWN, true)
+            pushNotifyKnownPeople = prefs.getBoolean(KEY_PUSH_NOTIFY_KNOWN, true),
+            whatsappEnabled = prefs.getBoolean(KEY_WHATSAPP_ENABLED, false),
+            whatsappContacts = readWhatsAppContacts()
         )
     }
 
@@ -133,6 +154,7 @@ class SharedPreferencesSettingsRepository(
             .putString(KEY_SMTP_PASSWORD, settings.smtpPassword)
             .putString(KEY_REMOTE_VIEW_PASSWORD, settings.remoteViewPassword)
             .putString(KEY_PUSH_TOPIC, settings.pushTopic)
+            .putString(KEY_WHATSAPP_CONTACTS, gson.toJson(settings.whatsappContacts))
             .apply()
 
         prefs.edit()
@@ -163,6 +185,7 @@ class SharedPreferencesSettingsRepository(
             .putBoolean(KEY_PUSH_ENABLED, settings.pushEnabled)
             .putString(KEY_PUSH_SERVER_URL, settings.pushServerUrl)
             .putBoolean(KEY_PUSH_NOTIFY_KNOWN, settings.pushNotifyKnownPeople)
+            .putBoolean(KEY_WHATSAPP_ENABLED, settings.whatsappEnabled)
             .apply()
     }
 
