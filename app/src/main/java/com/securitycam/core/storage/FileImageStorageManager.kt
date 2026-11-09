@@ -245,7 +245,7 @@ class FileImageStorageManager(
             canvas.drawRect(left, top, min(left + tagSize, right), min(top + tagSize, bottom), cornerPaint)
         }
 
-        // 2. Draw Translucent Dark Bottom Banner
+        // 2. Darken Bottom Banner Background (both canvas fill and direct pixel buffer)
         val bannerHeight = max(24f, min(w, h) * 0.065f)
         val bannerRect = RectF(0f, h - bannerHeight, w, h)
         val bannerPaint = Paint().apply {
@@ -254,7 +254,11 @@ class FileImageStorageManager(
         }
         canvas.drawRect(bannerRect, bannerPaint)
 
-        // 3. Draw Watermark Monospace Text
+        // Darken banner background pixels and render bounding box edges in pixel buffer BEFORE drawing text
+        renderWatermarkPixels(mutable, boxes, bannerHeight)
+
+        // 3. Draw Watermark Monospace Text AFTER darkening
+        // Drawing text on top ensures white text pixels (Color.WHITE) remain crisp and are NOT dimmed
         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss 'UTC'", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("UTC")
         }
@@ -273,8 +277,9 @@ class FileImageStorageManager(
         val y = (h - bannerHeight) + (bannerHeight - (fontMetrics.descent + fontMetrics.ascent)) / 2f
         canvas.drawText(textString, x, y, textPaint)
 
-        // 4. Update pixel buffer directly for guaranteed rendering across Android hardware buffers and JVM headless test harness
-        renderWatermarkPixels(mutable, boxes, bannerHeight)
+        // Draw crisp white text pixels directly to pixel buffer on top of darkened banner
+        val textStartY = ((h - bannerHeight) + (bannerHeight - 5) / 2f).toInt()
+        renderWatermarkTextPixels(mutable, textString, x.toInt(), textStartY, bannerHeight)
 
         return mutable
     }
@@ -340,4 +345,80 @@ class FileImageStorageManager(
             }
         }
     }
+
+    private fun renderWatermarkTextPixels(
+        bitmap: Bitmap,
+        text: String,
+        startX: Int,
+        startY: Int,
+        bannerHeight: Float
+    ) {
+        var curX = startX
+        val scale = max(1, (bannerHeight / 16f).toInt())
+        val white = Color.WHITE
+
+        for (char in text.uppercase()) {
+            val glyph = FONT_3X5[char] ?: FONT_3X5[' '] ?: continue
+            for (row in 0 until 5) {
+                val rowBits = glyph[row]
+                for (col in 0 until 3) {
+                    if ((rowBits and (1 shl (2 - col))) != 0) {
+                        for (dy in 0 until scale) {
+                            for (dx in 0 until scale) {
+                                val px = curX + col * scale + dx
+                                val py = startY + row * scale + dy
+                                if (px in 0 until bitmap.width && py in 0 until bitmap.height) {
+                                    bitmap.setPixel(px, py, white)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            curX += (4 * scale)
+        }
+    }
+
+    private val FONT_3X5 = mapOf(
+        '0' to intArrayOf(0b111, 0b101, 0b101, 0b101, 0b111),
+        '1' to intArrayOf(0b010, 0b110, 0b010, 0b010, 0b111),
+        '2' to intArrayOf(0b111, 0b001, 0b111, 0b100, 0b111),
+        '3' to intArrayOf(0b111, 0b001, 0b111, 0b001, 0b111),
+        '4' to intArrayOf(0b101, 0b101, 0b111, 0b001, 0b001),
+        '5' to intArrayOf(0b111, 0b100, 0b111, 0b001, 0b111),
+        '6' to intArrayOf(0b111, 0b100, 0b111, 0b101, 0b111),
+        '7' to intArrayOf(0b111, 0b001, 0b010, 0b010, 0b010),
+        '8' to intArrayOf(0b111, 0b101, 0b111, 0b101, 0b111),
+        '9' to intArrayOf(0b111, 0b101, 0b111, 0b001, 0b111),
+        'A' to intArrayOf(0b111, 0b101, 0b111, 0b101, 0b101),
+        'B' to intArrayOf(0b110, 0b101, 0b110, 0b101, 0b110),
+        'C' to intArrayOf(0b111, 0b100, 0b100, 0b100, 0b111),
+        'D' to intArrayOf(0b110, 0b101, 0b101, 0b101, 0b110),
+        'E' to intArrayOf(0b111, 0b100, 0b110, 0b100, 0b111),
+        'F' to intArrayOf(0b111, 0b100, 0b110, 0b100, 0b100),
+        'G' to intArrayOf(0b111, 0b100, 0b101, 0b101, 0b111),
+        'H' to intArrayOf(0b101, 0b101, 0b111, 0b101, 0b101),
+        'I' to intArrayOf(0b111, 0b010, 0b010, 0b010, 0b111),
+        'J' to intArrayOf(0b001, 0b001, 0b001, 0b101, 0b111),
+        'K' to intArrayOf(0b101, 0b110, 0b100, 0b110, 0b101),
+        'L' to intArrayOf(0b100, 0b100, 0b100, 0b100, 0b111),
+        'M' to intArrayOf(0b101, 0b111, 0b101, 0b101, 0b101),
+        'N' to intArrayOf(0b111, 0b101, 0b101, 0b101, 0b101),
+        'O' to intArrayOf(0b111, 0b101, 0b101, 0b101, 0b111),
+        'P' to intArrayOf(0b111, 0b101, 0b111, 0b100, 0b100),
+        'Q' to intArrayOf(0b111, 0b101, 0b101, 0b111, 0b001),
+        'R' to intArrayOf(0b110, 0b101, 0b110, 0b101, 0b101),
+        'S' to intArrayOf(0b111, 0b100, 0b111, 0b001, 0b111),
+        'T' to intArrayOf(0b111, 0b010, 0b010, 0b010, 0b010),
+        'U' to intArrayOf(0b101, 0b101, 0b101, 0b101, 0b111),
+        'V' to intArrayOf(0b101, 0b101, 0b101, 0b101, 0b010),
+        'W' to intArrayOf(0b101, 0b101, 0b101, 0b111, 0b101),
+        'X' to intArrayOf(0b101, 0b101, 0b010, 0b101, 0b101),
+        'Y' to intArrayOf(0b101, 0b101, 0b010, 0b010, 0b010),
+        'Z' to intArrayOf(0b111, 0b001, 0b010, 0b100, 0b111),
+        '-' to intArrayOf(0b000, 0b000, 0b111, 0b000, 0b000),
+        ':' to intArrayOf(0b000, 0b010, 0b000, 0b010, 0b000),
+        '|' to intArrayOf(0b010, 0b010, 0b010, 0b010, 0b010),
+        ' ' to intArrayOf(0b000, 0b000, 0b000, 0b000, 0b000)
+    )
 }

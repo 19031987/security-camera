@@ -1,10 +1,21 @@
 package com.securitycam.core.alerting
 
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.graphics.BitmapFactory
+import android.util.Log
+import androidx.core.app.NotificationCompat
+import com.securitycam.R
+import com.securitycam.SecurityCamApp
 import com.securitycam.core.config.CooldownManager
 import com.securitycam.core.config.RecipientValidator
 import com.securitycam.core.config.SettingsRepository
 import com.securitycam.core.storage.EventRepository
 import com.securitycam.core.storage.MotionEventEntity
+import com.securitycam.ui.EventHistoryActivity
+import com.securitycam.ui.MainActivity
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -20,8 +31,17 @@ class DefaultAlertCoordinator(
     private val cooldownManager: CooldownManager,
     private val smsDispatcher: SmsDispatcher,
     private val emailDispatcher: EmailDispatcher,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val context: Context? = null
 ) : AlertCoordinator {
+
+    companion object {
+        const val TAG = "DefaultAlertCoordinator"
+        const val BURST_DEBOUNCE_MS = 3000L
+    }
+
+    @Volatile
+    private var lastRecordedEventTimestamp: Long = 0L
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
 
@@ -32,6 +52,19 @@ class DefaultAlertCoordinator(
     }
 
     override suspend fun onMotionDetected(payload: AlertPayload): AlertDispatchSummary = withContext(ioDispatcher) {
+        // R1 Defense-in-depth: If rapid duplicate arrives within debounce window, suppress duplicate save
+        if (lastRecordedEventTimestamp != 0L && (payload.timestamp - lastRecordedEventTimestamp) < BURST_DEBOUNCE_MS) {
+            return@withContext AlertDispatchSummary(
+                eventId = payload.eventId,
+                isArmed = isArmed(),
+                isSuppressedByCooldown = true,
+                smsResult = null,
+                emailResult = null,
+                localEventSaved = false
+            )
+        }
+        lastRecordedEventTimestamp = payload.timestamp
+
         // Step 1: GUARANTEE local event is recorded into Room database first
         val eventEntity = MotionEventEntity(
             id = payload.eventId,
@@ -83,6 +116,9 @@ class DefaultAlertCoordinator(
 
         val formattedDate = dateFormat.format(Date(payload.timestamp))
         val scorePercent = (payload.motionScore * 100).toInt()
+
+        // R6: Post high-priority BigPictureStyle notification to CHANNEL_ALERTS
+        postLocalAlertNotification(payload, scorePercent, formattedDate)
 
         // Step 5: Multi-channel dispatch
         if (settings.smsEnabled && validPhones.isNotEmpty()) {
@@ -170,5 +206,79 @@ class DefaultAlertCoordinator(
             emailResult = emailResult,
             localEventSaved = false
         )
+    }
+
+    private fun postLocalAlertNotification(
+        payload: AlertPayload,
+        scorePercent: Int,
+        formattedDate: String
+    ) {
+        val ctx = context ?: runCatching { SecurityCamApp.getAppContext() }.getOrNull() ?: return
+        try {
+            val notificationManager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+
+            // 1. Decode screenshot bitmap for BigPictureStyle
+            val screenshotBitmap = try {
+                if (payload.screenshotFile.exists() && payload.screenshotFile.length() > 0) {
+                    BitmapFactory.decodeFile(payload.screenshotFile.absolutePath)
+                } else null
+            } catch (e: Exception) {
+                null
+            }
+
+            // 2. ContentIntent: Open Live Preview (MainActivity)
+            val openAppIntent = Intent(ctx, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra("EXTRA_EVENT_ID", payload.eventId)
+            }
+            val contentPendingIntent = PendingIntent.getActivity(
+                ctx,
+                payload.eventId.hashCode(),
+                openAppIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            // 3. ActionIntent: Open Event History Gallery
+            val historyIntent = Intent(ctx, EventHistoryActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra("EXTRA_EVENT_ID", payload.eventId)
+            }
+            val historyPendingIntent = PendingIntent.getActivity(
+                ctx,
+                payload.eventId.hashCode() + 1,
+                historyIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            // 4. Build Notification with BigPictureStyle, High Priority, Sound & Vibration
+            val summaryText = "Motion detected (${scorePercent}%, Camera: ${payload.cameraFacing})"
+            val builder = NotificationCompat.Builder(ctx, SecurityCamApp.CHANNEL_ALERTS)
+                .setSmallIcon(R.drawable.ic_stat_alert)
+                .setContentTitle("🚨 Motion Detected!")
+                .setContentText(summaryText)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setAutoCancel(true)
+                .setContentIntent(contentPendingIntent)
+                .addAction(R.drawable.ic_history, "View History", historyPendingIntent)
+
+            if (screenshotBitmap != null) {
+                builder.setStyle(
+                    NotificationCompat.BigPictureStyle()
+                        .bigPicture(screenshotBitmap)
+                        .setSummaryText(summaryText)
+                )
+            } else {
+                builder.setStyle(
+                    NotificationCompat.BigTextStyle()
+                        .bigText("Motion detected on Camera ${payload.cameraFacing} at $formattedDate (Score: $scorePercent%). Snapshot recorded.")
+                )
+            }
+
+            val notificationId = SecurityCamApp.NOTIFICATION_ID_ALERT_BASE + (payload.eventId.hashCode() and 0x7FFF)
+            notificationManager.notify(notificationId, builder.build())
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to post local alert notification: ${e.message}", e)
+        }
     }
 }

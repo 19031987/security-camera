@@ -137,6 +137,32 @@ class FileImageStorageTest {
     }
 
     @Test
+    fun testWatermarkTextIsDrawnWhite(): Unit = runBlocking {
+        val width = 320
+        val height = 240
+        // Use a solid dark background so white text contrasts clearly
+        val solidDark = createTestBitmap(width, height, Color.DKGRAY)
+        val file = storageManager.saveScreenshot(solidDark, 1700000000000L, emptyList())
+        val decoded = BitmapFactory.decodeFile(file.absolutePath)
+        assertNotNull(decoded)
+
+        // In the bottom banner region, verify that crisp white monospace text pixels exist
+        val bannerHeight = Math.max(24f, Math.min(width, height) * 0.065f).toInt()
+        var foundWhiteTextPixel = false
+        for (y in (height - bannerHeight) until height) {
+            for (x in 5 until (width - 5)) {
+                val p = decoded.getPixel(x, y)
+                if (Color.red(p) > 220 && Color.green(p) > 220 && Color.blue(p) > 220) {
+                    foundWhiteTextPixel = true
+                    break
+                }
+            }
+            if (foundWhiteTextPixel) break
+        }
+        assertTrue("Monospace watermark text must have crisp white pixels (RGB > 220)", foundWhiteTextPixel)
+    }
+
+    @Test
     fun testBoundingBoxDrawnOnImage(): Unit = runBlocking {
         val width = 200
         val height = 200

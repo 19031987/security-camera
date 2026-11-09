@@ -5,6 +5,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.graphics.Color
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import android.os.Build
 import android.os.Environment
 import android.util.Log
@@ -112,7 +114,8 @@ class SecurityCamApp : Application() {
             eventRepository = eventRepository,
             cooldownManager = cooldownManager,
             smsDispatcher = smsDispatcher,
-            emailDispatcher = emailDispatcher
+            emailDispatcher = emailDispatcher,
+            context = this
         )
     }
 
@@ -151,6 +154,12 @@ class SecurityCamApp : Application() {
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 500, 200, 500)
                 lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+                val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                val audioAttributes = AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+                    .build()
+                setSound(soundUri, audioAttributes)
             }
 
             notificationManager.createNotificationChannels(listOf(surveillanceChannel, alertChannel))

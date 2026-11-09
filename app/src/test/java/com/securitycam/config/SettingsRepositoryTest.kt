@@ -19,14 +19,19 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 class SettingsRepositoryTest {
 
+    private lateinit var context: Context
+    private lateinit var prefs: android.content.SharedPreferences
+    private lateinit var securePrefs: android.content.SharedPreferences
     private lateinit var repository: SharedPreferencesSettingsRepository
 
     @Before
     fun setUp() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val prefs = context.getSharedPreferences("test_settings", Context.MODE_PRIVATE)
+        context = ApplicationProvider.getApplicationContext<Context>()
+        prefs = context.getSharedPreferences("test_settings", Context.MODE_PRIVATE)
+        securePrefs = context.getSharedPreferences("test_secure_credentials", Context.MODE_PRIVATE)
         prefs.edit().clear().commit()
-        repository = SharedPreferencesSettingsRepository(prefs)
+        securePrefs.edit().clear().commit()
+        repository = SharedPreferencesSettingsRepository(prefs, securePrefs)
     }
 
     @Test
@@ -130,5 +135,50 @@ class SettingsRepositoryTest {
         val settings = repository.getSettings()
         assertTrue(settings.isArmed)
         assertEquals(50, settings.sensitivity)
+    }
+
+    @Test
+    fun testSmtpPassword_isSavedToSecurePreferencesAndExcludedFromPlaintext() {
+        val custom = SecuritySettings(smtpPassword = "ultra_secure_password_123")
+        repository.updateSettings(custom)
+
+        // Password MUST be persisted in securePrefs
+        assertEquals("ultra_secure_password_123", securePrefs.getString("pref_smtp_password", null))
+
+        // Password MUST NOT be in standard plaintext prefs
+        assertFalse("Plaintext prefs must not contain SMTP password", prefs.contains("pref_smtp_password"))
+
+        // getSettings() must transparently return decrypted password
+        assertEquals("ultra_secure_password_123", repository.getSettings().smtpPassword)
+    }
+
+    @Test
+    fun testLegacySmtpPasswordMigration() {
+        // Simulate legacy version where password was stored in standard prefs
+        prefs.edit().putString("pref_smtp_password", "legacy_plain_password").commit()
+        securePrefs.edit().clear().commit()
+
+        val loaded = repository.getSettings()
+        assertEquals("legacy_plain_password", loaded.smtpPassword)
+
+        // After access, password must be migrated to securePrefs and removed from prefs
+        assertEquals("legacy_plain_password", securePrefs.getString("pref_smtp_password", null))
+        assertFalse("Legacy password must be scrubbed from standard prefs", prefs.contains("pref_smtp_password"))
+    }
+
+    @Test
+    fun testPatrolModeSettingsPersistence() {
+        assertFalse(repository.isPatrolModeEnabled())
+        assertEquals(30, repository.getPatrolIntervalSeconds())
+
+        repository.setPatrolModeEnabled(true)
+        repository.setPatrolIntervalSeconds(45)
+
+        assertTrue(repository.isPatrolModeEnabled())
+        assertEquals(45, repository.getPatrolIntervalSeconds())
+
+        val settings = repository.getSettings()
+        assertTrue(settings.isPatrolModeEnabled)
+        assertEquals(45, settings.patrolIntervalSeconds)
     }
 }

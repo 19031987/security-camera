@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
+import android.graphics.Matrix
 import android.os.Build
 import android.os.PowerManager
 import android.util.Log
@@ -28,11 +29,15 @@ import com.securitycam.SecurityCamApp
 import com.securitycam.core.alerting.AlertPayload
 import com.securitycam.core.surveillance.LuminanceFrame
 import com.securitycam.core.surveillance.MotionResult
+import com.securitycam.core.surveillance.NormalizedRect
 import com.securitycam.ui.MainActivity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.UUID
 import java.util.concurrent.ExecutorService
@@ -66,8 +71,14 @@ class SurveillanceService : LifecycleService() {
 
     private val app by lazy { SecurityCamApp.getInstance() }
 
+    @Volatile
+    private var lastSnapshotTimestamp: Long = 0L
+
+    private var patrolJob: Job? = null
+
     companion object {
         const val TAG = "SurveillanceService"
+        const val SNAPSHOT_BURST_THROTTLE_MS = 3000L // Maximum 1 saved snapshot per 3000ms during continuous motion
 
         // Actions
         const val ACTION_START = "com.securitycam.service.ACTION_START"
@@ -236,6 +247,7 @@ class SurveillanceService : LifecycleService() {
     }
 
     private fun stopSurveillance() {
+        stopPatrolMode()
         try {
             cameraProvider?.unbindAll()
         } catch (e: Exception) {
@@ -258,20 +270,53 @@ class SurveillanceService : LifecycleService() {
         notificationManager.notify(SecurityCamApp.NOTIFICATION_ID_SURVEILLANCE, notification)
     }
 
-    private fun switchCameraLens() {
+    fun switchCameraLens(persistSetting: Boolean = true) {
         val currentFacing = _liveState.value.cameraFacing
         val newFacing = if (currentFacing == "FRONT") "BACK" else "FRONT"
-        try {
-            val currentSettings = app.settingsRepository.getSettings()
-            app.settingsRepository.updateSettings(currentSettings.copy(cameraFacing = newFacing))
-        } catch (e: Exception) {
-            Log.w(TAG, "Unable to update cameraFacing settings: ${e.message}")
+        if (persistSetting) {
+            try {
+                val currentSettings = app.settingsRepository.getSettings()
+                app.settingsRepository.updateSettings(currentSettings.copy(cameraFacing = newFacing))
+            } catch (e: Exception) {
+                Log.w(TAG, "Unable to update cameraFacing settings: ${e.message}")
+            }
         }
+
+        // R7: Clean background model reset to prevent false motion alarm on lens switch
+        try {
+            app.motionDetector.reset()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to reset motion detector on lens switch: ${e.message}")
+        }
+        lastSnapshotTimestamp = 0L
+
         _liveState.value = _liveState.value.copy(
             cameraFacing = newFacing,
-            isTorchOn = false
+            isTorchOn = false,
+            motionResult = null
         )
         initCameraX()
+    }
+
+    private fun updatePatrolState(enabled: Boolean, intervalSeconds: Int) {
+        patrolJob?.cancel()
+        if (!enabled) return
+
+        val intervalMs = intervalSeconds.coerceAtLeast(10) * 1000L
+        patrolJob = lifecycleScope.launch(Dispatchers.Main) {
+            while (isActive) {
+                delay(intervalMs)
+                if (_liveState.value.isRunning) {
+                    Log.i(TAG, "Patrol timer triggered: alternating camera lens.")
+                    switchCameraLens(persistSetting = false)
+                }
+            }
+        }
+    }
+
+    private fun stopPatrolMode() {
+        patrolJob?.cancel()
+        patrolJob = null
     }
 
     private fun toggleTorchState() {
@@ -367,13 +412,26 @@ class SurveillanceService : LifecycleService() {
             _liveState.value = _liveState.value.copy(motionResult = result)
 
             if (result.isMotionDetected && _liveState.value.isArmed) {
-                val bitmap = try {
-                    image.toBitmap()
-                } catch (e: Exception) {
-                    null
-                }
-                if (bitmap != null) {
-                    onMotionIntrusionDetected(bitmap, result, timestamp)
+                val now = timestamp
+                // R1: Throttle frame captures to 1 snapshot per SNAPSHOT_BURST_THROTTLE_MS during continuous motion
+                if (now - lastSnapshotTimestamp >= SNAPSHOT_BURST_THROTTLE_MS) {
+                    lastSnapshotTimestamp = now
+                    val rawBitmap = try {
+                        image.toBitmap()
+                    } catch (e: Exception) {
+                        null
+                    }
+                    if (rawBitmap != null) {
+                        val rotationDegrees = try {
+                            image.imageInfo.rotationDegrees
+                        } catch (_: Exception) {
+                            0
+                        }
+                        val isFrontCamera = _liveState.value.cameraFacing.equals("FRONT", ignoreCase = true)
+                        val orientedBitmap = orientBitmap(rawBitmap, rotationDegrees, isFrontCamera)
+                        val orientedBoxes = orientBoundingBoxes(result.boundingBoxes, rotationDegrees, isFrontCamera)
+                        onMotionIntrusionDetected(orientedBitmap, result, orientedBoxes, now)
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -383,10 +441,104 @@ class SurveillanceService : LifecycleService() {
         }
     }
 
-    private fun onMotionIntrusionDetected(bitmap: Bitmap, result: MotionResult, timestamp: Long) {
+    fun orientBitmap(rawBitmap: Bitmap, rotationDegrees: Int, isFrontFacing: Boolean): Bitmap {
+        if (rotationDegrees == 0 && !isFrontFacing) {
+            return rawBitmap
+        }
+        return try {
+            val matrix = Matrix()
+            if (isFrontFacing) {
+                // Mirror horizontally across center axis
+                matrix.postScale(-1f, 1f, rawBitmap.width / 2f, rawBitmap.height / 2f)
+            }
+            if (rotationDegrees != 0) {
+                matrix.postRotate(rotationDegrees.toFloat())
+            }
+            val transformed = Bitmap.createBitmap(
+                rawBitmap, 0, 0, rawBitmap.width, rawBitmap.height, matrix, true
+            )
+            if (transformed != rawBitmap) {
+                rawBitmap.recycle()
+            }
+            transformed
+        } catch (e: Exception) {
+            Log.w(TAG, "Matrix rotation/mirroring failed, fallback to raw: ${e.message}")
+            rawBitmap
+        }
+    }
+
+    fun orientBoundingBoxes(
+        boxes: List<NormalizedRect>,
+        rotationDegrees: Int,
+        isFrontFacing: Boolean
+    ): List<NormalizedRect> {
+        if ((rotationDegrees == 0 && !isFrontFacing) || boxes.isEmpty()) {
+            return boxes
+        }
+        return boxes.map { box ->
+            var left = box.left
+            var top = box.top
+            var right = box.right
+            var bottom = box.bottom
+
+            if (isFrontFacing) {
+                val mirrorLeft = 1f - right
+                val mirrorRight = 1f - left
+                left = minOf(mirrorLeft, mirrorRight)
+                right = maxOf(mirrorLeft, mirrorRight)
+            }
+
+            when (rotationDegrees) {
+                90 -> {
+                    val newLeft = 1f - bottom
+                    val newTop = left
+                    val newRight = 1f - top
+                    val newBottom = right
+                    left = minOf(newLeft, newRight)
+                    right = maxOf(newLeft, newRight)
+                    top = minOf(newTop, newBottom)
+                    bottom = maxOf(newTop, newBottom)
+                }
+                180 -> {
+                    val newLeft = 1f - right
+                    val newTop = 1f - bottom
+                    val newRight = 1f - left
+                    val newBottom = 1f - top
+                    left = minOf(newLeft, newRight)
+                    right = maxOf(newLeft, newRight)
+                    top = minOf(newTop, newBottom)
+                    bottom = maxOf(newTop, newBottom)
+                }
+                270 -> {
+                    val newLeft = top
+                    val newTop = 1f - right
+                    val newRight = bottom
+                    val newBottom = 1f - left
+                    left = minOf(newLeft, newRight)
+                    right = maxOf(newLeft, newRight)
+                    top = minOf(newTop, newBottom)
+                    bottom = maxOf(newTop, newBottom)
+                }
+            }
+
+            NormalizedRect(
+                left = left.coerceIn(0f, 1f),
+                top = top.coerceIn(0f, 1f),
+                right = right.coerceIn(0f, 1f),
+                bottom = bottom.coerceIn(0f, 1f)
+            )
+        }
+    }
+
+    private fun onMotionIntrusionDetected(
+        bitmap: Bitmap,
+        result: MotionResult,
+        boxes: List<NormalizedRect>,
+        timestamp: Long
+    ) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val screenshotFile = app.imageStorageManager.saveScreenshot(bitmap, timestamp, result.boundingBoxes)
+                val screenshotFile = app.imageStorageManager.saveScreenshot(bitmap, timestamp, boxes)
                 val payload = AlertPayload(
                     eventId = UUID.randomUUID().toString(),
                     timestamp = timestamp,
@@ -439,6 +591,7 @@ class SurveillanceService : LifecycleService() {
                         isArmed = settings.isArmed,
                         cameraFacing = settings.cameraFacing
                     )
+                    updatePatrolState(settings.isPatrolModeEnabled, settings.patrolIntervalSeconds)
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Settings observer stopped: ${e.message}")
@@ -448,6 +601,7 @@ class SurveillanceService : LifecycleService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        stopPatrolMode()
         activeInstance = null
         activeSurfaceProvider = null
         releaseWakeLock()

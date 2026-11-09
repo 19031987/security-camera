@@ -139,4 +139,25 @@ class SurveillanceServiceLifecycleTest {
 
         controller.destroy()
     }
+
+    @Test
+    fun testSwitchCameraResetsMotionDetector() {
+        val app = SecurityCamApp.getInstance()
+        // Feed an initial frame to motionDetector
+        val frame = com.securitycam.core.surveillance.LuminanceFrame(ByteArray(160 * 120) { 100 }, 160, 120, 1000L)
+        app.motionDetector.processFrame(frame)
+
+        val controller = Robolectric.buildService(SurveillanceService::class.java)
+        val service = controller.create().get()
+
+        // Call switchCameraLens
+        service.switchCameraLens(persistSetting = false)
+
+        // After reset, processing a completely different frame should be treated as first frame (isMotionDetected = false)
+        val newLensFrame = com.securitycam.core.surveillance.LuminanceFrame(ByteArray(160 * 120) { 20 }, 160, 120, 2000L)
+        val result = app.motionDetector.processFrame(newLensFrame)
+        assertFalse("First frame after camera switch must not trigger false motion alarm", result.isMotionDetected)
+
+        controller.destroy()
+    }
 }

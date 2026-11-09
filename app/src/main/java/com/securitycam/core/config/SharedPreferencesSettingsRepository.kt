@@ -11,11 +11,13 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 class SharedPreferencesSettingsRepository(
     private val prefs: SharedPreferences,
+    private val securePrefs: SharedPreferences = prefs,
     private val gson: Gson = Gson()
 ) : SettingsRepository {
 
     companion object {
         const val PREF_FILE_NAME = "security_cam_settings"
+        const val SECURE_PREFS_FILE = "security_cam_credentials"
 
         private const val KEY_PHONE_NUMBERS = "pref_phone_numbers"
         private const val KEY_EMAIL_ADDRESSES = "pref_email_addresses"
@@ -36,10 +38,13 @@ class SharedPreferencesSettingsRepository(
         private const val KEY_IS_ARMED = "pref_is_armed"
         private const val KEY_CAMERA_FACING = "pref_camera_facing"
         private const val KEY_LOW_LIGHT = "pref_low_light"
+        private const val KEY_PATROL_MODE_ENABLED = "pref_patrol_mode_enabled"
+        private const val KEY_PATROL_INTERVAL_SECONDS = "pref_patrol_interval_seconds"
 
         fun create(context: Context): SharedPreferencesSettingsRepository {
             val sp = context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
-            return SharedPreferencesSettingsRepository(sp)
+            val secureSp = SecurePreferencesFactory.create(context)
+            return SharedPreferencesSettingsRepository(sp, secureSp)
         }
     }
 
@@ -69,6 +74,18 @@ class SharedPreferencesSettingsRepository(
             emptyList()
         }
 
+        // Retrieve SMTP password from secure encrypted storage (with seamless migration from legacy plaintext prefs)
+        val password = if (securePrefs.contains(KEY_SMTP_PASSWORD)) {
+            securePrefs.getString(KEY_SMTP_PASSWORD, "") ?: ""
+        } else if (prefs.contains(KEY_SMTP_PASSWORD)) {
+            val legacyPassword = prefs.getString(KEY_SMTP_PASSWORD, "") ?: ""
+            securePrefs.edit().putString(KEY_SMTP_PASSWORD, legacyPassword).apply()
+            prefs.edit().remove(KEY_SMTP_PASSWORD).apply()
+            legacyPassword
+        } else {
+            ""
+        }
+
         return SecuritySettings(
             phoneNumbers = phones,
             emailAddresses = emails,
@@ -78,7 +95,7 @@ class SharedPreferencesSettingsRepository(
             smtpHost = prefs.getString(KEY_SMTP_HOST, "smtp.gmail.com") ?: "smtp.gmail.com",
             smtpPort = prefs.getInt(KEY_SMTP_PORT, 587),
             smtpUsername = prefs.getString(KEY_SMTP_USERNAME, "") ?: "",
-            smtpPassword = prefs.getString(KEY_SMTP_PASSWORD, "") ?: "",
+            smtpPassword = password,
             smtpSenderEmail = prefs.getString(KEY_SMTP_SENDER_EMAIL, "") ?: "",
             smtpSenderName = prefs.getString(KEY_SMTP_SENDER_NAME, "Security Camera") ?: "Security Camera",
             smtpUseTls = prefs.getBoolean(KEY_SMTP_USE_TLS, true),
@@ -88,11 +105,18 @@ class SharedPreferencesSettingsRepository(
             cooldownSeconds = prefs.getInt(KEY_COOLDOWN_SECONDS, 30),
             isArmed = prefs.getBoolean(KEY_IS_ARMED, true),
             cameraFacing = prefs.getString(KEY_CAMERA_FACING, "BACK") ?: "BACK",
-            lowLightCompensation = prefs.getBoolean(KEY_LOW_LIGHT, true)
+            lowLightCompensation = prefs.getBoolean(KEY_LOW_LIGHT, true),
+            isPatrolModeEnabled = prefs.getBoolean(KEY_PATROL_MODE_ENABLED, false),
+            patrolIntervalSeconds = prefs.getInt(KEY_PATROL_INTERVAL_SECONDS, 30)
         )
     }
 
     override fun updateSettings(settings: SecuritySettings) {
+        // Persist password to secure preferences and ensure removed from plaintext prefs
+        securePrefs.edit()
+            .putString(KEY_SMTP_PASSWORD, settings.smtpPassword)
+            .apply()
+
         prefs.edit()
             .putString(KEY_PHONE_NUMBERS, gson.toJson(settings.phoneNumbers))
             .putString(KEY_EMAIL_ADDRESSES, gson.toJson(settings.emailAddresses))
@@ -102,7 +126,7 @@ class SharedPreferencesSettingsRepository(
             .putString(KEY_SMTP_HOST, settings.smtpHost)
             .putInt(KEY_SMTP_PORT, settings.smtpPort)
             .putString(KEY_SMTP_USERNAME, settings.smtpUsername)
-            .putString(KEY_SMTP_PASSWORD, settings.smtpPassword)
+            .remove(KEY_SMTP_PASSWORD) // Ensure never stored in plaintext prefs
             .putString(KEY_SMTP_SENDER_EMAIL, settings.smtpSenderEmail)
             .putString(KEY_SMTP_SENDER_NAME, settings.smtpSenderName)
             .putBoolean(KEY_SMTP_USE_TLS, settings.smtpUseTls)
@@ -113,6 +137,8 @@ class SharedPreferencesSettingsRepository(
             .putBoolean(KEY_IS_ARMED, settings.isArmed)
             .putString(KEY_CAMERA_FACING, settings.cameraFacing)
             .putBoolean(KEY_LOW_LIGHT, settings.lowLightCompensation)
+            .putBoolean(KEY_PATROL_MODE_ENABLED, settings.isPatrolModeEnabled)
+            .putInt(KEY_PATROL_INTERVAL_SECONDS, settings.patrolIntervalSeconds.coerceIn(10, 300))
             .apply()
     }
 
@@ -159,7 +185,20 @@ class SharedPreferencesSettingsRepository(
         prefs.edit().putString(KEY_EMAIL_ADDRESSES, gson.toJson(valid)).apply()
     }
 
+    override fun isPatrolModeEnabled(): Boolean = prefs.getBoolean(KEY_PATROL_MODE_ENABLED, false)
+
+    override fun setPatrolModeEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_PATROL_MODE_ENABLED, enabled).apply()
+    }
+
+    override fun getPatrolIntervalSeconds(): Int = prefs.getInt(KEY_PATROL_INTERVAL_SECONDS, 30)
+
+    override fun setPatrolIntervalSeconds(seconds: Int) {
+        prefs.edit().putInt(KEY_PATROL_INTERVAL_SECONDS, seconds.coerceIn(10, 300)).apply()
+    }
+
     override fun resetToDefaults() {
         prefs.edit().clear().apply()
+        securePrefs.edit().clear().apply()
     }
 }

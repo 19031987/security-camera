@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="sharedpref" path="security_cam_settings.xml" />
+        <include domain="database" path="security_cam.db" />
+        <exclude domain="sharedpref" path="security_cam_credentials.xml" />
+        <exclude domain="sharedpref" path="security_cam_secure_prefs.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="sharedpref" path="security_cam_settings.xml" />
+        <include domain="database" path="security_cam.db" />
+        <exclude domain="sharedpref" path="security_cam_credentials.xml" />
+        <exclude domain="sharedpref" path="security_cam_secure_prefs.xml" />
+    </device-transfer>
+</data-extraction-rules>

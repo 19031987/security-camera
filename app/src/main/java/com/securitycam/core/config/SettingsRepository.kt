@@ -25,5 +25,11 @@ interface SettingsRepository {
     fun getEmailAddresses(): List<String>
     fun setEmailAddresses(emails: List<String>)
 
+    fun isPatrolModeEnabled(): Boolean
+    fun setPatrolModeEnabled(enabled: Boolean)
+
+    fun getPatrolIntervalSeconds(): Int
+    fun setPatrolIntervalSeconds(seconds: Int)
+
     fun resetToDefaults()
 }

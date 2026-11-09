@@ -22,5 +22,7 @@ data class SecuritySettings(
     val cooldownSeconds: Int = 30,
     val isArmed: Boolean = true,
     val cameraFacing: String = "BACK",
-    val lowLightCompensation: Boolean = true
+    val lowLightCompensation: Boolean = true,
+    val isPatrolModeEnabled: Boolean = false,
+    val patrolIntervalSeconds: Int = 30
 )
