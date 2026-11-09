@@ -20,12 +20,17 @@ data class MotionEventEntity(
     val motionScore: Float,
     val isLowLight: Boolean,
     val smsStatus: String = STATUS_DISABLED,
-    val emailStatus: String = STATUS_DISABLED
+    val emailStatus: String = STATUS_DISABLED,
+    /** Names of enrolled household members recognised in this event; null when nobody was. */
+    val recognizedPerson: String? = null
 ) {
     companion object {
         const val STATUS_SENT = "SENT"
         const val STATUS_FAILED = "FAILED"
         const val STATUS_SUPPRESSED = "SUPPRESSED"
         const val STATUS_DISABLED = "DISABLED"
+
+        /** No alert was sent because an enrolled household member was recognised. */
+        const val STATUS_KNOWN_PERSON = "KNOWN_PERSON"
     }
 }

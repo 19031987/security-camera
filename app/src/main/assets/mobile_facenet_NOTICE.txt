@@ -1,0 +1,10 @@
+mobile_facenet.tflite
+
+Face-embedding model "MobileFaceNet", used on the device to recognise enrolled
+household members. Nothing is sent off the device.
+
+Source: Qualcomm AI Hub Models, release v0.66.0 (TFLite, float precision)
+        https://huggingface.co/qualcomm/MobileFaceNet
+Based on: https://github.com/foamliu/MobileFaceNet
+Licence: Apache License 2.0 (both the export and the original implementation)
+         https://www.apache.org/licenses/LICENSE-2.0

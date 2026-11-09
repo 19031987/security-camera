@@ -9,5 +9,6 @@ data class AlertDispatchSummary(
     val isSuppressedByCooldown: Boolean,
     val smsResult: DispatchResult?,
     val emailResult: DispatchResult?,
-    val localEventSaved: Boolean
+    val localEventSaved: Boolean,
+    val isSuppressedByKnownPerson: Boolean = false
 )

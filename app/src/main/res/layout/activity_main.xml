@@ -91,6 +91,22 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <TextView
+            android:id="@+id/tvNightBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_sm"
+            android:background="@drawable/chip_status_background"
+            android:backgroundTint="@color/tertiary_container"
+            android:gravity="center_vertical"
+            android:minHeight="36dp"
+            android:paddingHorizontal="@dimen/space_md"
+            android:text="@string/badge_night_vision"
+            android:textAppearance="@style/TextAppearance.SecurityCam.Badge"
+            android:textColor="@color/on_tertiary_container"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
         <Space
             android:layout_width="0dp"
             android:layout_height="1dp"

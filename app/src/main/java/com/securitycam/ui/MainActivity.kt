@@ -222,6 +222,8 @@ class MainActivity : AppCompatActivity() {
         binding.tvStatusBadge.setText(pillText)
         binding.tvStatusBadge.setTextColor(pillTint)
 
+        binding.tvNightBadge.visibility = if (state.isNightVisionActive) View.VISIBLE else View.GONE
+
         // 2. Arm / disarm button. Arming is the highlighted action; disarming is deliberately quieter.
         if (state.isArmed) {
             binding.fabArmDisarm.setText(R.string.action_disarm)

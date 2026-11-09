@@ -17,6 +17,9 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.chip.ChipGroup
+import com.securitycam.core.remote.ViewerServer
+import java.net.Inet4Address
+import java.net.NetworkInterface
 import com.google.android.material.chip.Chip
 import com.securitycam.R
 import com.securitycam.SecurityCamApp
@@ -55,6 +58,8 @@ class SettingsActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updateBatteryStatus()
+        updateKnownPeopleSummary()
+        updateRemoteViewStatus()
     }
 
     override fun onPause() {
@@ -111,7 +116,15 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchSmtpTls.isChecked = settings.smtpUseTls
         binding.switchSmtpSsl.isChecked = settings.smtpUseSsl
 
-        // 6. Only show a channel's fields while that channel is switched on
+        // 6. Night vision, remote viewing, known people
+        binding.switchNightVision.isChecked = settings.nightVisionEnabled
+        binding.etRemotePassword.setText(settings.remoteViewPassword)
+        binding.switchRemoteView.isChecked = settings.remoteViewEnabled &&
+            ViewerServer.isAcceptablePassword(settings.remoteViewPassword)
+        binding.groupRemoteFields.visibility = View.VISIBLE
+        binding.switchKnownPeople.isChecked = settings.knownPeopleEnabled
+
+        // 7. Only show a channel's fields while that channel is switched on
         binding.groupSmsFields.visibility = if (settings.smsEnabled) View.VISIBLE else View.GONE
         binding.groupEmailFields.visibility = if (settings.emailEnabled) View.VISIBLE else View.GONE
     }
@@ -202,6 +215,41 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
+        // Night vision
+        binding.switchNightVision.setOnCheckedChangeListener { _, isChecked ->
+            val cur = app.settingsRepository.getSettings()
+            app.settingsRepository.updateSettings(cur.copy(nightVisionEnabled = isChecked))
+        }
+
+        // Remote viewing: can only be switched on once a long enough password is set
+        binding.switchRemoteView.setOnCheckedChangeListener { button, isChecked ->
+            val password = binding.etRemotePassword.text?.toString().orEmpty()
+            if (isChecked && !ViewerServer.isAcceptablePassword(password)) {
+                binding.tilRemotePassword.error = getString(R.string.error_remote_password_short)
+                button.isChecked = false
+                return@setOnCheckedChangeListener
+            }
+            binding.tilRemotePassword.error = null
+            val cur = app.settingsRepository.getSettings()
+            app.settingsRepository.updateSettings(
+                cur.copy(remoteViewEnabled = isChecked, remoteViewPassword = password)
+            )
+            updateRemoteViewStatus()
+        }
+        binding.etRemotePassword.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) saveRemotePassword()
+        }
+        binding.btnShareRemoteLink.setOnClickListener { shareRemoteLink() }
+
+        // Known people
+        binding.switchKnownPeople.setOnCheckedChangeListener { _, isChecked ->
+            val cur = app.settingsRepository.getSettings()
+            app.settingsRepository.updateSettings(cur.copy(knownPeopleEnabled = isChecked))
+        }
+        binding.btnManagePeople.setOnClickListener {
+            startActivity(Intent(this, KnownPeopleActivity::class.java))
+        }
+
         // Mail server settings expander
         binding.rowSmtpAdvanced.setOnClickListener {
             val expand = binding.groupSmtpAdvanced.visibility != View.VISIBLE
@@ -250,7 +298,70 @@ class SettingsActivity : AppCompatActivity() {
         group.addView(chip)
     }
 
+    /**
+     * Stores the viewing password. If it has become too short while the live view is on,
+     * the live view is switched off rather than left running with a weak password.
+     */
+    private fun saveRemotePassword() {
+        val password = binding.etRemotePassword.text?.toString().orEmpty()
+        val cur = app.settingsRepository.getSettings()
+        val acceptable = ViewerServer.isAcceptablePassword(password)
+        if (cur.remoteViewPassword == password && (acceptable || !cur.remoteViewEnabled)) return
+
+        app.settingsRepository.updateSettings(
+            cur.copy(remoteViewPassword = password, remoteViewEnabled = cur.remoteViewEnabled && acceptable)
+        )
+        if (!acceptable && binding.switchRemoteView.isChecked) {
+            binding.switchRemoteView.isChecked = false
+        }
+        updateRemoteViewStatus()
+    }
+
+    private fun remoteLinks(): List<String> {
+        return try {
+            NetworkInterface.getNetworkInterfaces().asSequence()
+                .filter { it.isUp && !it.isLoopback }
+                .flatMap { it.inetAddresses.asSequence() }
+                .filterIsInstance<Inet4Address>()
+                .map { "http://${it.hostAddress}:${ViewerServer.DEFAULT_PORT}" }
+                .toList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun updateRemoteViewStatus() {
+        val enabled = binding.switchRemoteView.isChecked
+        val links = if (enabled) remoteLinks() else emptyList()
+        binding.tvRemoteStatus.text = when {
+            !enabled -> getString(R.string.remote_status_needs_password)
+            links.isEmpty() -> getString(R.string.remote_status_no_network)
+            else -> getString(R.string.remote_status_links, links.joinToString("\n"))
+        }
+        binding.btnShareRemoteLink.visibility = if (links.isEmpty()) View.GONE else View.VISIBLE
+    }
+
+    private fun shareRemoteLink() {
+        val link = remoteLinks().firstOrNull() ?: return
+        // The password is deliberately not included; share it separately.
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, getString(R.string.remote_share_text, link))
+        }
+        startActivity(Intent.createChooser(intent, getString(R.string.action_share_link)))
+    }
+
+    private fun updateKnownPeopleSummary() {
+        val count = app.knownPeopleStore.current().size
+        binding.tvKnownPeopleSummary.text = if (count == 0) {
+            getString(R.string.people_summary_none)
+        } else {
+            resources.getQuantityString(R.plurals.people_summary_count, count, count)
+        }
+    }
+
     private fun persistTextAndSmtpSettings() {
+        saveRemotePassword()
         try {
             val cur = app.settingsRepository.getSettings()
             val webhook = binding.etWebhookUrl.text?.toString()?.trim().let { if (it.isNullOrBlank()) null else it }

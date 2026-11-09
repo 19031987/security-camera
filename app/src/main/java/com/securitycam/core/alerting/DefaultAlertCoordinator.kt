@@ -71,9 +71,10 @@ class DefaultAlertCoordinator(
             timestamp = payload.timestamp,
             imagePath = payload.screenshotFile.absolutePath,
             motionScore = payload.motionScore,
-            isLowLight = false,
+            isLowLight = payload.isLowLight,
             smsStatus = MotionEventEntity.STATUS_DISABLED,
-            emailStatus = MotionEventEntity.STATUS_DISABLED
+            emailStatus = MotionEventEntity.STATUS_DISABLED,
+            recognizedPerson = payload.recognizedPeople
         )
         eventRepository.insertEvent(eventEntity)
 
@@ -86,6 +87,23 @@ class DefaultAlertCoordinator(
                 smsResult = null,
                 emailResult = null,
                 localEventSaved = true
+            )
+        }
+
+        // Step 2b: A recognised household member is recorded but never alerted on.
+        // This runs before the cooldown so it does not use up the alert window.
+        if (payload.suppressAlert) {
+            eventRepository.updateSmsStatus(payload.eventId, MotionEventEntity.STATUS_KNOWN_PERSON)
+            eventRepository.updateEmailStatus(payload.eventId, MotionEventEntity.STATUS_KNOWN_PERSON)
+
+            return@withContext AlertDispatchSummary(
+                eventId = payload.eventId,
+                isArmed = true,
+                isSuppressedByCooldown = false,
+                smsResult = null,
+                emailResult = null,
+                localEventSaved = true,
+                isSuppressedByKnownPerson = true
             )
         }
 
