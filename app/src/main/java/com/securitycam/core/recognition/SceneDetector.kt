@@ -12,14 +12,18 @@ import java.nio.ByteOrder
 
 /** Says what is in the part of a picture that moved. */
 interface SceneDetector {
-    /** [boxes] are the motion regions as fractions of the frame: left, top, right, bottom. */
-    fun detect(bitmap: Bitmap, boxes: List<FloatArray>): SceneLabel
+    /**
+     * [boxes] are the motion regions as fractions of the frame: left, top, right, bottom.
+     * Returns null when the model could not run, which is different from running and
+     * recognising nothing ([SceneLabel.UNKNOWN]).
+     */
+    fun detect(bitmap: Bitmap, boxes: List<FloatArray>): SceneLabel?
 }
 
 /**
  * Runs the bundled EfficientDet-Lite0 model on the device. Only the per-class scores are used
  * (is there a person / animal / vehicle?), so no box decoding is needed. Must be called off the
- * main thread. Any failure yields [SceneLabel.UNKNOWN], which alerts as plain "Motion".
+ * main thread. Any failure yields null, which callers treat as "alert anyway".
  */
 class TfliteSceneDetector(private val context: Context) : SceneDetector {
 
@@ -36,7 +40,7 @@ class TfliteSceneDetector(private val context: Context) : SceneDetector {
     private val paint = Paint(Paint.FILTER_BITMAP_FLAG)
 
     @Synchronized
-    override fun detect(bitmap: Bitmap, boxes: List<FloatArray>): SceneLabel {
+    override fun detect(bitmap: Bitmap, boxes: List<FloatArray>): SceneLabel? {
         return try {
             val region = SceneLabeler.regionOfInterest(boxes)
             val source = Rect(
@@ -45,7 +49,7 @@ class TfliteSceneDetector(private val context: Context) : SceneDetector {
                 (region[2] * bitmap.width).toInt().coerceAtMost(bitmap.width),
                 (region[3] * bitmap.height).toInt().coerceAtMost(bitmap.height)
             )
-            if (source.width() <= 0 || source.height() <= 0) return SceneLabel.UNKNOWN
+            if (source.width() <= 0 || source.height() <= 0) return null
 
             val scaled = Bitmap.createBitmap(INPUT_SIZE, INPUT_SIZE, Bitmap.Config.ARGB_8888)
             Canvas(scaled).drawBitmap(bitmap, source, Rect(0, 0, INPUT_SIZE, INPUT_SIZE), paint)
@@ -72,7 +76,7 @@ class TfliteSceneDetector(private val context: Context) : SceneDetector {
             }
             interpreter.runForMultipleInputsOutputs(arrayOf<Any>(input), outputs)
 
-            val anchors = scores?.get(0) ?: return SceneLabel.UNKNOWN
+            val anchors = scores?.get(0) ?: return null
             val best = FloatArray(SceneLabeler.LABELS.size)
             for (anchor in anchors) {
                 for (c in best.indices) {
@@ -82,7 +86,7 @@ class TfliteSceneDetector(private val context: Context) : SceneDetector {
             SceneLabeler.summarize(best)
         } catch (e: Exception) {
             Log.w(TAG, "Scene detection failed: ${e.message}")
-            SceneLabel.UNKNOWN
+            null
         }
     }
 

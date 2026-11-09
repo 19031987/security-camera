@@ -171,6 +171,7 @@ class EventAdapter(
                 MotionEventEntity.STATUS_SUPPRESSED -> "$prefix: Cooldown"
                 MotionEventEntity.STATUS_DISABLED -> "$prefix: Disabled"
                 MotionEventEntity.STATUS_KNOWN_PERSON -> "$prefix: Not sent"
+                MotionEventEntity.STATUS_QUIET -> "$prefix: Not sent"
                 else -> "$prefix: $status"
             }
         }
@@ -182,6 +183,7 @@ class EventAdapter(
                 MotionEventEntity.STATUS_SUPPRESSED -> 0xFFFFAB00.toInt() // Amber
                 MotionEventEntity.STATUS_DISABLED -> 0xFF94A3B8.toInt() // Muted grey
                 MotionEventEntity.STATUS_KNOWN_PERSON -> 0xFF94A3B8.toInt() // Muted grey: nothing went wrong
+                MotionEventEntity.STATUS_QUIET -> 0xFF94A3B8.toInt()
                 else -> 0xFFFFFFFF.toInt()
             }
         }

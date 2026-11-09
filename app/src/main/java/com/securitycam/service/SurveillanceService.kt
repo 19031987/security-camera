@@ -49,6 +49,7 @@ import com.securitycam.core.surveillance.FrameSampler
 import com.securitycam.core.surveillance.LowLightEnhancer
 import com.securitycam.core.surveillance.LuminanceFrame
 import com.securitycam.core.surveillance.MotionResult
+import com.securitycam.core.surveillance.MotionZone
 import com.securitycam.core.surveillance.NightVisionController
 import com.securitycam.core.surveillance.NormalizedRect
 import com.securitycam.ui.MainActivity
@@ -493,7 +494,18 @@ class SurveillanceService : LifecycleService() {
             val isFrontCamera = _liveState.value.cameraFacing.equals("FRONT", ignoreCase = true)
             publishStreamFrame(image, timestamp, isFrontCamera, brighten)
 
-            if (result.isMotionDetected && _liveState.value.isArmed) {
+            // Movement entirely outside the motion zone doesn't count.
+            val settingsNow = currentSettings
+            val zone = MotionZone(settingsNow.zoneLeft, settingsNow.zoneTop, settingsNow.zoneRight, settingsNow.zoneBottom)
+            val inZone = !result.isMotionDetected || zone.isWholePicture || zone.contains(
+                orientBoundingBoxes(
+                    result.boundingBoxes,
+                    try { image.imageInfo.rotationDegrees } catch (_: Exception) { 0 },
+                    isFrontCamera
+                )
+            )
+
+            if (result.isMotionDetected && inZone && _liveState.value.isArmed) {
                 val now = timestamp
                 // R1: Throttle frame captures to 1 snapshot per SNAPSHOT_BURST_THROTTLE_MS during continuous motion
                 val throttle = if (isHoldingAlert) SNAPSHOT_HOLD_THROTTLE_MS else SNAPSHOT_BURST_THROTTLE_MS
@@ -805,7 +817,7 @@ class SurveillanceService : LifecycleService() {
             )
         } catch (e: Exception) {
             Log.w(TAG, "Scene detection failed: ${e.message}")
-            SceneLabel.UNKNOWN
+            null
         }
         val screenshotFile = app.imageStorageManager.saveScreenshot(capture.bitmap, capture.timestamp, capture.boxes)
         val payload = AlertPayload(
@@ -817,7 +829,8 @@ class SurveillanceService : LifecycleService() {
             isLowLight = capture.isLowLight,
             recognizedPeople = recognizedPeople,
             suppressAlert = suppressAlert,
-            detectedLabel = if (label.kind == SceneLabel.Kind.OTHER) null else label.headline
+            detectedLabel = if (label == null || label.kind == SceneLabel.Kind.OTHER) null else label.headline,
+            detectedKind = label?.kind?.name
         )
         app.alertCoordinator.onMotionDetected(payload)
         _liveState.value = _liveState.value.copy(lastEventTimestamp = capture.timestamp)

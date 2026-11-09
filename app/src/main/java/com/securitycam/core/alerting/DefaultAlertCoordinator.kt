@@ -111,6 +111,25 @@ class DefaultAlertCoordinator(
             )
         }
 
+        // Step 2c: Alert rules. Home mode and kinds the owner didn't select are recorded quietly,
+        // again without using up the cooldown.
+        if (AlertPolicy.decide(settingsRepository.getSettings(), payload.detectedKind, payload.isLowLight) !=
+            AlertPolicy.Verdict.ALERT
+        ) {
+            eventRepository.updateSmsStatus(payload.eventId, MotionEventEntity.STATUS_QUIET)
+            eventRepository.updateEmailStatus(payload.eventId, MotionEventEntity.STATUS_QUIET)
+
+            return@withContext AlertDispatchSummary(
+                eventId = payload.eventId,
+                isArmed = true,
+                isSuppressedByCooldown = false,
+                smsResult = null,
+                emailResult = null,
+                localEventSaved = true,
+                isQuietByRules = true
+            )
+        }
+
         // Step 3: Cooldown Gatekeeping
         if (!cooldownManager.shouldAlert(payload.timestamp)) {
             eventRepository.updateSmsStatus(payload.eventId, MotionEventEntity.STATUS_SUPPRESSED)

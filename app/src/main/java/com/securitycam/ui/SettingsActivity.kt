@@ -141,6 +141,10 @@ class SettingsActivity : AppCompatActivity() {
         binding.groupRemoteFields.visibility = View.VISIBLE
         binding.switchKnownPeople.isChecked = settings.knownPeopleEnabled
         binding.switchSmsPicture.isChecked = settings.smsSendPicture
+        binding.switchNotifyPerson.isChecked = settings.notifyPerson
+        binding.switchNotifyAnimal.isChecked = settings.notifyAnimal
+        binding.switchNotifyVehicle.isChecked = settings.notifyVehicle
+        binding.switchNotifyOther.isChecked = settings.notifyOther
         binding.switchDrive.isChecked = settings.driveEnabled
         binding.btnDriveConnect.visibility = if (settings.driveEnabled) View.GONE else View.VISIBLE
         showDriveStatus(
@@ -264,6 +268,23 @@ class SettingsActivity : AppCompatActivity() {
             if (!hasFocus) saveRemotePassword()
         }
         binding.btnShareRemoteLink.setOnClickListener { shareRemoteLink() }
+
+        // What to notify about
+        val saveNotifyChoices = { _: android.widget.CompoundButton, _: Boolean ->
+            val cur = app.settingsRepository.getSettings()
+            app.settingsRepository.updateSettings(
+                cur.copy(
+                    notifyPerson = binding.switchNotifyPerson.isChecked,
+                    notifyAnimal = binding.switchNotifyAnimal.isChecked,
+                    notifyVehicle = binding.switchNotifyVehicle.isChecked,
+                    notifyOther = binding.switchNotifyOther.isChecked
+                )
+            )
+        }
+        binding.switchNotifyPerson.setOnCheckedChangeListener(saveNotifyChoices)
+        binding.switchNotifyAnimal.setOnCheckedChangeListener(saveNotifyChoices)
+        binding.switchNotifyVehicle.setOnCheckedChangeListener(saveNotifyChoices)
+        binding.switchNotifyOther.setOnCheckedChangeListener(saveNotifyChoices)
 
         // Picture messages
         binding.switchSmsPicture.setOnCheckedChangeListener { _, isChecked ->

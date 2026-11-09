@@ -17,5 +17,10 @@ data class AlertPayload(
     /** True when the event is recorded but must not send an alert (a known person was recognised). */
     val suppressAlert: Boolean = false,
     /** What the on-device model saw moving, e.g. "Person" or "Animal (dog)"; null when unsure. */
-    val detectedLabel: String? = null
+    val detectedLabel: String? = null,
+    /**
+     * The model's category (see AlertPolicy.KIND_*), or null when the model could not run.
+     * Null is treated as "alert", so a broken model never silences the camera.
+     */
+    val detectedKind: String? = null
 )

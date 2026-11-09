@@ -47,6 +47,15 @@ class SharedPreferencesSettingsRepository(
         private const val KEY_SMS_SEND_PICTURE = "pref_sms_send_picture"
         private const val KEY_DRIVE_ENABLED = "pref_drive_enabled"
         private const val KEY_DRIVE_FOLDER_ID = "pref_drive_folder_id"
+        private const val KEY_ALERT_MODE = "pref_alert_mode"
+        private const val KEY_NOTIFY_PERSON = "pref_notify_person"
+        private const val KEY_NOTIFY_ANIMAL = "pref_notify_animal"
+        private const val KEY_NOTIFY_VEHICLE = "pref_notify_vehicle"
+        private const val KEY_NOTIFY_OTHER = "pref_notify_other"
+        private const val KEY_ZONE_LEFT = "pref_zone_left"
+        private const val KEY_ZONE_TOP = "pref_zone_top"
+        private const val KEY_ZONE_RIGHT = "pref_zone_right"
+        private const val KEY_ZONE_BOTTOM = "pref_zone_bottom"
 
         fun create(context: Context): SharedPreferencesSettingsRepository {
             val sp = context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
@@ -121,7 +130,16 @@ class SharedPreferencesSettingsRepository(
             knownPeopleEnabled = prefs.getBoolean(KEY_KNOWN_PEOPLE_ENABLED, false),
             smsSendPicture = prefs.getBoolean(KEY_SMS_SEND_PICTURE, true),
             driveEnabled = prefs.getBoolean(KEY_DRIVE_ENABLED, false),
-            driveFolderId = prefs.getString(KEY_DRIVE_FOLDER_ID, "") ?: ""
+            driveFolderId = prefs.getString(KEY_DRIVE_FOLDER_ID, "") ?: "",
+            alertMode = prefs.getString(KEY_ALERT_MODE, "AWAY") ?: "AWAY",
+            notifyPerson = prefs.getBoolean(KEY_NOTIFY_PERSON, true),
+            notifyAnimal = prefs.getBoolean(KEY_NOTIFY_ANIMAL, true),
+            notifyVehicle = prefs.getBoolean(KEY_NOTIFY_VEHICLE, false),
+            notifyOther = prefs.getBoolean(KEY_NOTIFY_OTHER, false),
+            zoneLeft = prefs.getFloat(KEY_ZONE_LEFT, 0f),
+            zoneTop = prefs.getFloat(KEY_ZONE_TOP, 0f),
+            zoneRight = prefs.getFloat(KEY_ZONE_RIGHT, 1f),
+            zoneBottom = prefs.getFloat(KEY_ZONE_BOTTOM, 1f)
         )
     }
 
@@ -160,6 +178,15 @@ class SharedPreferencesSettingsRepository(
             .putBoolean(KEY_SMS_SEND_PICTURE, settings.smsSendPicture)
             .putBoolean(KEY_DRIVE_ENABLED, settings.driveEnabled)
             .putString(KEY_DRIVE_FOLDER_ID, settings.driveFolderId)
+            .putString(KEY_ALERT_MODE, settings.alertMode)
+            .putBoolean(KEY_NOTIFY_PERSON, settings.notifyPerson)
+            .putBoolean(KEY_NOTIFY_ANIMAL, settings.notifyAnimal)
+            .putBoolean(KEY_NOTIFY_VEHICLE, settings.notifyVehicle)
+            .putBoolean(KEY_NOTIFY_OTHER, settings.notifyOther)
+            .putFloat(KEY_ZONE_LEFT, settings.zoneLeft)
+            .putFloat(KEY_ZONE_TOP, settings.zoneTop)
+            .putFloat(KEY_ZONE_RIGHT, settings.zoneRight)
+            .putFloat(KEY_ZONE_BOTTOM, settings.zoneBottom)
             .apply()
     }
 
