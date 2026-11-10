@@ -21,6 +21,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.material.chip.ChipGroup
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.firebase.FirebaseApp
+import com.securitycam.core.push.PushMessage
+import com.securitycam.core.push.ServiceAccount
 import com.securitycam.core.remote.ViewerServer
 import java.net.Inet4Address
 import java.net.NetworkInterface
@@ -44,6 +48,13 @@ class SettingsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
     private val app by lazy { SecurityCamApp.getInstance() }
+
+    /** Picks the Firebase key file the owner copied onto this phone. */
+    private val pushKeyPicker = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) loadPushKey(uri)
+    }
 
     /** Google's own consent screen, shown the first time Drive access is granted. */
     private val driveConsent = registerForActivityResult(
@@ -141,6 +152,13 @@ class SettingsActivity : AppCompatActivity() {
         binding.groupRemoteFields.visibility = View.VISIBLE
         binding.switchKnownPeople.isChecked = settings.knownPeopleEnabled
         binding.switchSmsPicture.isChecked = settings.smsSendPicture
+
+        // Phone notifications
+        val firebaseReady = FirebaseApp.getApps(this).isNotEmpty()
+        binding.tvPushUnavailable.visibility = if (firebaseReady) View.GONE else View.VISIBLE
+        binding.groupPush.visibility = if (firebaseReady) View.VISIBLE else View.GONE
+        binding.switchPushArrivals.isChecked = settings.pushNotifyArrivals
+        renderPushState()
         binding.switchNotifyPerson.isChecked = settings.notifyPerson
         binding.switchNotifyAnimal.isChecked = settings.notifyAnimal
         binding.switchNotifyVehicle.isChecked = settings.notifyVehicle
@@ -286,6 +304,48 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchNotifyVehicle.setOnCheckedChangeListener(saveNotifyChoices)
         binding.switchNotifyOther.setOnCheckedChangeListener(saveNotifyChoices)
 
+        // Phone notifications
+        binding.switchPush.setOnCheckedChangeListener { button, isChecked ->
+            if (!button.isPressed) return@setOnCheckedChangeListener
+            val cur = app.settingsRepository.getSettings()
+            // Can only be on once a key file is loaded; otherwise there is nothing to send with.
+            val canEnable = ServiceAccount.parse(cur.pushServiceAccountJson) != null
+            app.settingsRepository.updateSettings(cur.copy(pushEnabled = isChecked && canEnable))
+            renderPushState()
+        }
+        binding.switchPushArrivals.setOnCheckedChangeListener { _, isChecked ->
+            val cur = app.settingsRepository.getSettings()
+            app.settingsRepository.updateSettings(cur.copy(pushNotifyArrivals = isChecked))
+        }
+        binding.btnLoadPushKey.setOnClickListener {
+            pushKeyPicker.launch(arrayOf("application/json", "application/octet-stream", "text/plain"))
+        }
+        binding.btnRemovePushKey.setOnClickListener {
+            val cur = app.settingsRepository.getSettings()
+            app.settingsRepository.updateSettings(cur.copy(pushServiceAccountJson = "", pushEnabled = false))
+            renderPushState()
+        }
+        binding.btnSharePushCode.setOnClickListener {
+            val code = ensurePushLinkCode()
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, getString(R.string.push_share_text, code))
+            }
+            startActivity(Intent.createChooser(intent, getString(R.string.action_share_code)))
+        }
+        binding.btnNewPushCode.setOnClickListener {
+            MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.push_new_code_title)
+                .setMessage(R.string.push_new_code_message)
+                .setPositiveButton(R.string.action_new_code) { _, _ ->
+                    val cur = app.settingsRepository.getSettings()
+                    app.settingsRepository.updateSettings(cur.copy(pushLinkCode = PushMessage.newLinkCode()))
+                    renderPushState()
+                }
+                .setNegativeButton(R.string.action_cancel, null)
+                .show()
+        }
+
         // Picture messages
         binding.switchSmsPicture.setOnCheckedChangeListener { _, isChecked ->
             val cur = app.settingsRepository.getSettings()
@@ -376,6 +436,66 @@ class SettingsActivity : AppCompatActivity() {
             binding.switchRemoteView.isChecked = false
         }
         updateRemoteViewStatus()
+    }
+
+    /** The camera's link code, created the first time it is needed. */
+    private fun ensurePushLinkCode(): String {
+        val cur = app.settingsRepository.getSettings()
+        if (PushMessage.topicFor(cur.pushLinkCode) != null) return cur.pushLinkCode
+        val code = PushMessage.newLinkCode()
+        app.settingsRepository.updateSettings(cur.copy(pushLinkCode = code))
+        return code
+    }
+
+    private fun renderPushState(statusOverride: String? = null, isError: Boolean = false) {
+        if (FirebaseApp.getApps(this).isEmpty()) return
+        val settings = app.settingsRepository.getSettings()
+        val account = ServiceAccount.parse(settings.pushServiceAccountJson)
+
+        binding.switchPush.isChecked = settings.pushEnabled && account != null
+        binding.btnRemovePushKey.visibility = if (account != null) View.VISIBLE else View.GONE
+        binding.tvPushKeyStatus.text = statusOverride ?: if (account != null) {
+            getString(R.string.push_key_loaded, account.projectId)
+        } else {
+            getString(R.string.push_key_missing)
+        }
+        binding.tvPushKeyStatus.setTextColor(
+            androidx.core.content.ContextCompat.getColor(
+                this, if (isError) R.color.status_disarmed else R.color.on_surface_muted
+            )
+        )
+        // Shown in groups of four so it is easier to read out or type.
+        binding.tvPushLinkCode.text = ensurePushLinkCode().chunked(4).joinToString(" ")
+    }
+
+    private fun loadPushKey(uri: Uri) {
+        val text = try {
+            contentResolver.openInputStream(uri)?.use { stream ->
+                // A real key file is about 2 KB; refuse anything implausibly large.
+                val bytes = stream.readBytes()
+                if (bytes.size > 64 * 1024) null else String(bytes, Charsets.UTF_8)
+            }
+        } catch (e: Exception) {
+            null
+        }
+        if (text == null || ServiceAccount.parse(text) == null) {
+            renderPushState(getString(R.string.push_key_invalid), isError = true)
+            return
+        }
+
+        val cur = app.settingsRepository.getSettings()
+        app.settingsRepository.updateSettings(cur.copy(pushServiceAccountJson = text))
+        renderPushState(getString(R.string.push_key_checking))
+        lifecycleScope.launch {
+            val check = withContext(Dispatchers.IO) { app.fcmSender.checkKey() }
+            if (check.isSuccess) {
+                val latest = app.settingsRepository.getSettings()
+                app.settingsRepository.updateSettings(latest.copy(pushEnabled = true))
+                renderPushState()
+            } else {
+                renderPushState(getString(R.string.push_key_rejected, check.errorMessage.orEmpty()), isError = true)
+            }
+        }
     }
 
     private fun connectDrive() {
@@ -527,7 +647,13 @@ class SettingsActivity : AppCompatActivity() {
                 else -> getString(R.string.test_email_failed, summary.emailResult.errorMessage.orEmpty())
             }
 
-            binding.tvTestAlertResult.text = "$smsInfo\n$emailInfo"
+            val pushInfo = when {
+                summary.pushResult == null -> null
+                summary.pushResult.isSuccess -> getString(R.string.test_push_ok)
+                else -> getString(R.string.test_push_failed, summary.pushResult.errorMessage.orEmpty())
+            }
+
+            binding.tvTestAlertResult.text = listOfNotNull(pushInfo, smsInfo, emailInfo).joinToString("\n")
         }
     }
 

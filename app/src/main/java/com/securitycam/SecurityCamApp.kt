@@ -1,5 +1,8 @@
 package com.securitycam
 
+import com.securitycam.core.push.FcmPushNotifier
+import com.securitycam.core.push.FcmSender
+import com.securitycam.core.push.ServiceAccount
 import com.securitycam.core.alerting.AndroidMmsDispatcher
 import com.securitycam.core.alerting.DriveUploader
 import com.securitycam.core.alerting.GoogleDriveAuth
@@ -67,6 +70,7 @@ class SecurityCamApp : Application() {
     lateinit var sceneDetector: SceneDetector
     lateinit var driveAuth: GoogleDriveAuth
     lateinit var driveUploader: DriveUploader
+    lateinit var fcmSender: FcmSender
 
     companion object {
         const val TAG = "SecurityCamApp"
@@ -141,6 +145,10 @@ class SecurityCamApp : Application() {
         )
         sceneDetector = TfliteSceneDetector(this)
 
+        fcmSender = FcmSender(
+            accountProvider = { ServiceAccount.parse(settingsRepository.getSettings().pushServiceAccountJson) }
+        )
+
         alertCoordinator = DefaultAlertCoordinator(
             settingsRepository = settingsRepository,
             eventRepository = eventRepository,
@@ -149,7 +157,8 @@ class SecurityCamApp : Application() {
             emailDispatcher = emailDispatcher,
             context = this,
             pictureDispatcher = AndroidMmsDispatcher(this),
-            cloudUploader = driveUploader
+            cloudUploader = driveUploader,
+            pushNotifier = FcmPushNotifier(fcmSender, { settingsRepository.getSettings().pushLinkCode })
         )
 
         viewerServer = ViewerServer(

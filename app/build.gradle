@@ -4,6 +4,12 @@ plugins {
     id 'kotlin-kapt'
 }
 
+// Firebase push notifications need the owner's own app/google-services.json, which is not in
+// the repository. Without it the app still builds; push notifications are simply unavailable.
+if (file('google-services.json').exists()) {
+    apply plugin: 'com.google.gms.google-services'
+}
+
 android {
     namespace 'com.securitycam'
     compileSdk 34
@@ -118,6 +124,10 @@ dependencies {
 
     // Google account permission for Drive uploads (Drive itself is called over HTTPS with OkHttp)
     implementation 'com.google.android.gms:play-services-auth:21.2.0'
+
+    // Firebase Cloud Messaging: receives push notifications on the owner's and family's phones
+    implementation platform('com.google.firebase:firebase-bom:33.1.2')
+    implementation 'com.google.firebase:firebase-messaging'
 
     // JSON Serialization
     implementation 'com.google.code.gson:gson:2.10.1'
