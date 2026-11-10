@@ -52,6 +52,8 @@ import com.securitycam.core.recognition.FaceMatcher
 import com.securitycam.core.recognition.FaceVerdict
 import com.securitycam.core.recognition.PresenceGate
 import com.securitycam.core.recognition.SceneLabel
+import com.securitycam.core.push.LiveViewGate
+import com.securitycam.core.push.PushMessage
 import com.securitycam.core.remote.ViewerServer
 import com.securitycam.core.storage.ClipStore
 import com.securitycam.core.surveillance.FrameSampler
@@ -165,6 +167,11 @@ class SurveillanceService : LifecycleService() {
         const val STREAM_FRAME_INTERVAL_MS = 200L
         const val STREAM_JPEG_QUALITY = 70
 
+        /** Live pictures for family phones: how often to look for a watcher, and to send a picture. */
+        const val LIVE_IDLE_POLL_MS = 5_000L
+        const val LIVE_ACTIVE_POLL_MS = 10_000L
+        const val LIVE_FRAME_INTERVAL_MS = 1_000L
+
         // Actions
         const val ACTION_START = "com.securitycam.service.ACTION_START"
         const val ACTION_STOP = "com.securitycam.service.ACTION_STOP"
@@ -247,6 +254,7 @@ class SurveillanceService : LifecycleService() {
         cameraExecutor = Executors.newSingleThreadExecutor()
         acquireWakeLock()
         observeSettingsChanges()
+        startLiveViewLoop()
         Log.i(TAG, "SurveillanceService created.")
     }
 
@@ -948,6 +956,62 @@ class SurveillanceService : LifecycleService() {
                 activeRecording?.stop()
             } catch (e: Exception) {
                 Log.w(TAG, "Error stopping the clip: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Live pictures for family phones. Every few seconds the camera checks the database for a
+     * "someone is watching" note; while one is fresh it publishes its newest picture about once
+     * a second. When nobody is watching this costs one small read every [LIVE_IDLE_POLL_MS].
+     */
+    private fun startLiveViewLoop() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val gate = LiveViewGate()
+            var lastRequestCheck = 0L
+            var sequence = System.currentTimeMillis()
+            var lastHubFrame = 0L
+            var watching = false
+            while (isActive) {
+                val settings = currentSettings
+                val linkCode = settings.pushLinkCode
+                if (!settings.liveViewEnabled || !_liveState.value.isRunning ||
+                    PushMessage.topicFor(linkCode) == null
+                ) {
+                    if (watching) {
+                        app.frameHub.removeViewer()
+                        watching = false
+                    }
+                    delay(LIVE_IDLE_POLL_MS)
+                    continue
+                }
+                try {
+                    val (account, token) = app.fcmSender.accountAndToken()
+                    val now = System.currentTimeMillis()
+                    val checkEvery = if (watching) LIVE_ACTIVE_POLL_MS else LIVE_IDLE_POLL_MS
+                    if (now - lastRequestCheck >= checkEvery) {
+                        lastRequestCheck = now
+                        gate.onRequestSeen(app.firestoreLive.readRequest(account.projectId, token, linkCode), now)
+                    }
+
+                    val shouldStream = gate.isStreaming(now)
+                    if (shouldStream != watching) {
+                        // Registering as a viewer is what makes the camera encode frames at all.
+                        if (shouldStream) app.frameHub.addViewer() else app.frameHub.removeViewer()
+                        watching = shouldStream
+                    }
+                    if (watching) {
+                        val frame = app.frameHub.awaitFrame(lastHubFrame, LIVE_FRAME_INTERVAL_MS)
+                        if (frame != null) {
+                            lastHubFrame = frame.sequence
+                            sequence++
+                            app.firestoreLive.writeFrame(account.projectId, token, linkCode, sequence, frame.jpeg)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Live view: ${e.message}")
+                }
+                delay(if (watching) LIVE_FRAME_INTERVAL_MS else LIVE_IDLE_POLL_MS)
             }
         }
     }

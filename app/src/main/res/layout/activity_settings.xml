@@ -933,6 +933,42 @@
                                 android:text="@string/action_copy_rules" />
                         </LinearLayout>
 
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:minHeight="@dimen/touch_target"
+                            android:orientation="horizontal">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="@dimen/space_md"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:labelFor="@id/switchLiveView"
+                                    android:text="@string/pref_live_title"
+                                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                                    android:textColor="@color/on_surface" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/pref_live_summary"
+                                    android:textAppearance="@style/TextAppearance.SecurityCam.Supporting" />
+                            </LinearLayout>
+
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/switchLiveView"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:contentDescription="@string/pref_live_title" />
+                        </LinearLayout>
+
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"

@@ -120,4 +120,15 @@ class DeviceRoleRoutingTest {
             assertFalse(repository.getSettings().pushEnabled)
         }
     }
+
+    @Test
+    fun theLiveViewScreenOpensAndExplainsWhenThePhoneIsNotLinked() {
+        setRole(SecuritySettings.ROLE_RECEIVER)
+        repository.updateSettings(repository.getSettings().copy(receiverLinkCode = ""))
+
+        val activity = Robolectric.buildActivity(LiveViewActivity::class.java).setup().get()
+
+        val status = activity.findViewById<android.widget.TextView>(com.securitycam.R.id.tvLiveStatus)
+        assertEquals(activity.getString(com.securitycam.R.string.live_unavailable), status.text.toString())
+    }
 }

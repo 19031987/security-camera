@@ -101,6 +101,17 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnWatchLive"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_lg"
+                android:minHeight="@dimen/touch_target"
+                android:text="@string/action_watch_live"
+                app:icon="@drawable/ic_videocam"
+                app:iconGravity="textStart" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

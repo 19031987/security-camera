@@ -121,6 +121,13 @@
             android:screenOrientation="portrait"
             android:windowSoftInputMode="stateHidden" />
 
+        <!-- Receiver role: live pictures from the camera -->
+        <activity
+            android:name="com.securitycam.ui.LiveViewActivity"
+            android:exported="false"
+            android:label="@string/title_live_view"
+            android:parentActivityName="com.securitycam.ui.ReceiverActivity" />
+
         <!-- Enrolment of household members for known-people recognition -->
         <activity
             android:name="com.securitycam.ui.KnownPeopleActivity"

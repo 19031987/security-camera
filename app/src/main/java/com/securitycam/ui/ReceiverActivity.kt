@@ -62,6 +62,13 @@ class ReceiverActivity : AppCompatActivity() {
         binding.btnReceiverBattery.setOnClickListener { requestBatteryExemption() }
         binding.btnUseAsCamera.setOnClickListener { switchToCamera() }
 
+        binding.btnWatchLive.setOnClickListener {
+            if (isLinked()) {
+                startActivity(Intent(this, LiveViewActivity::class.java))
+            } else {
+                Toast.makeText(this, R.string.live_unavailable, Toast.LENGTH_LONG).show()
+            }
+        }
         binding.btnClearReceived.setOnClickListener { app.receivedAlerts.clear() }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
