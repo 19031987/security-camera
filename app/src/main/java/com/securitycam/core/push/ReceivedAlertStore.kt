@@ -16,7 +16,11 @@ data class ReceivedAlert(
     val message: String = "",
     val time: Long = 0L,
     /** File name of the small picture that came with it, inside the store's folder; null if none. */
-    val pictureFile: String? = null
+    val pictureFile: String? = null,
+    /** Id of the full-size picture online, if the camera stored one. */
+    val pictureId: String? = null,
+    /** True once [pictureFile] holds the full-size picture rather than the thumbnail. */
+    val isFullPicture: Boolean = false
 )
 
 /**
@@ -36,7 +40,15 @@ class ReceivedAlertStore(
 
     fun current(): List<ReceivedAlert> = state.value
 
-    fun add(type: String, title: String, message: String, time: Long, pictureJpeg: ByteArray?): ReceivedAlert {
+    fun add(
+        type: String,
+        title: String,
+        message: String,
+        time: Long,
+        pictureJpeg: ByteArray?,
+        pictureId: String? = null,
+        isFullPicture: Boolean = false
+    ): ReceivedAlert {
         synchronized(lock) {
             directory.mkdirs()
             val id = UUID.randomUUID().toString()
@@ -45,7 +57,9 @@ class ReceivedAlertStore(
                 pictureName = "$id$PICTURE_EXTENSION"
                 File(directory, pictureName).writeBytes(pictureJpeg)
             }
-            val alert = ReceivedAlert(id, type, title, message, time, pictureName)
+            val alert = ReceivedAlert(
+                id, type, title, message, time, pictureName, pictureId, isFullPicture && pictureName != null
+            )
             val all = listOf(alert) + state.value
             val kept = all.take(capacity)
             all.drop(capacity).forEach { deletePicture(it) }
@@ -60,6 +74,20 @@ class ReceivedAlertStore(
         // Stored names are generated here, but never trust a name that could leave the folder.
         if (name.contains('/') || name.contains('\\') || name.contains("..")) return null
         return File(directory, name).takeIf { it.isFile }
+    }
+
+    /** Replaces an alert's thumbnail with the full-size picture once it has been fetched. */
+    fun setFullPicture(alertId: String, jpeg: ByteArray): ReceivedAlert? {
+        if (jpeg.isEmpty()) return null
+        synchronized(lock) {
+            val existing = state.value.firstOrNull { it.id == alertId } ?: return null
+            directory.mkdirs()
+            val name = "$alertId$PICTURE_EXTENSION"
+            File(directory, name).writeBytes(jpeg)
+            val updated = existing.copy(pictureFile = name, isFullPicture = true)
+            persist(state.value.map { if (it.id == alertId) updated else it })
+            return updated
+        }
     }
 
     fun clear() {

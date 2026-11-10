@@ -1,5 +1,7 @@
 package com.securitycam
 
+import com.securitycam.core.push.FirestorePictures
+import com.securitycam.core.push.PictureLedger
 import com.securitycam.core.push.ReceivedAlertStore
 import com.securitycam.core.storage.ClipStore
 import com.securitycam.core.push.FcmPushNotifier
@@ -77,6 +79,10 @@ class SecurityCamApp : Application() {
 
     /** Receiver role: the notifications this phone has been sent. */
     lateinit var receivedAlerts: ReceivedAlertStore
+
+    /** Full-size alert pictures in the owner's Firebase database. */
+    val firestorePictures = FirestorePictures()
+    lateinit var pictureLedger: PictureLedger
 
     companion object {
         const val TAG = "SecurityCamApp"
@@ -156,6 +162,7 @@ class SecurityCamApp : Application() {
         fcmSender = FcmSender(
             accountProvider = { ServiceAccount.parse(settingsRepository.getSettings().pushServiceAccountJson) }
         )
+        pictureLedger = PictureLedger(File(filesDir, PictureLedger.FILE_NAME))
 
         alertCoordinator = DefaultAlertCoordinator(
             settingsRepository = settingsRepository,
@@ -166,7 +173,11 @@ class SecurityCamApp : Application() {
             context = this,
             pictureDispatcher = AndroidMmsDispatcher(this),
             cloudUploader = driveUploader,
-            pushNotifier = FcmPushNotifier(fcmSender, { settingsRepository.getSettings().pushLinkCode })
+            pushNotifier = FcmPushNotifier(
+                fcmSender,
+                { settingsRepository.getSettings().pushLinkCode },
+                fullPictureUploader = { image, time -> storeFullPicture(image, time) }
+            )
         )
 
         viewerServer = ViewerServer(
@@ -188,6 +199,29 @@ class SecurityCamApp : Application() {
      * 1. Surveillance Channel: Low importance, non-intrusive ongoing notification.
      * 2. Alert Channel: High importance, sound, vibration, and red LED alert.
      */
+    /**
+     * Stores the full-size picture in the owner's database when that is switched on, and removes
+     * the oldest stored pictures beyond the ledger's limit. Returns the new picture's id, or null.
+     */
+    private fun storeFullPicture(image: File, time: Long): String? {
+        val settings = settingsRepository.getSettings()
+        if (!settings.pushFullPictures) return null
+        val jpeg = image.readBytes()
+        val (account, token) = fcmSender.accountAndToken()
+        val result = firestorePictures.upload(account.projectId, token, settings.pushLinkCode, jpeg, time)
+        val id = result.pictureId
+        if (id == null) {
+            Log.w(TAG, "Full-size picture not stored: ${result.error}")
+            return null
+        }
+        val expired = pictureLedger.add(settings.pushLinkCode, id)
+        val notDeleted = expired.filterNot {
+            firestorePictures.delete(account.projectId, token, it.linkCode, it.pictureId)
+        }
+        pictureLedger.restore(notDeleted)
+        return id
+    }
+
     private fun initNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

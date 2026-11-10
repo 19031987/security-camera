@@ -18,7 +18,12 @@ interface PushNotifier {
 class FcmPushNotifier(
     private val sender: FcmSender,
     private val linkCodeProvider: () -> String,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    /**
+     * Stores the full-size picture online and returns its id, or null when that is switched
+     * off or fails. The notification is sent either way, with the thumbnail.
+     */
+    private val fullPictureUploader: ((File, Long) -> String?)? = null
 ) : PushNotifier {
 
     override suspend fun notify(type: String, title: String, message: String, time: Long, image: File?): DispatchResult =
@@ -26,7 +31,16 @@ class FcmPushNotifier(
             val topic = PushMessage.topicFor(linkCodeProvider())
                 ?: return@withContext DispatchResult(false, 0, 1, "No link code has been created")
             val thumbnail = image?.let { makeThumbnail(it) }
-            sender.sendToTopic(topic, PushMessage.build(type, title, message, time, thumbnail))
+            val pictureId = if (image != null) {
+                try {
+                    fullPictureUploader?.invoke(image, time)
+                } catch (e: Exception) {
+                    null
+                }
+            } else {
+                null
+            }
+            sender.sendToTopic(topic, PushMessage.build(type, title, message, time, thumbnail, pictureId))
         }
 
     companion object {

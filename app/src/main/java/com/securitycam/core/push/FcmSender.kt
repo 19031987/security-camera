@@ -73,6 +73,16 @@ class FcmSender(
         }
     }
 
+    /**
+     * The loaded account and a current access token for it, for other Google services in the
+     * same project (the picture database). Throws if there is no key or Google refuses it.
+     */
+    @Synchronized
+    fun accountAndToken(): Pair<ServiceAccount, String> {
+        val account = accountProvider() ?: throw IllegalStateException("No Firebase key file is loaded")
+        return account to accessToken(account)
+    }
+
     /** Proves the key file works by fetching a token, without sending anything. */
     @Synchronized
     fun checkKey(): DispatchResult {
@@ -132,7 +142,9 @@ class FcmSender(
         DispatchResult(isSuccess = false, deliveredCount = 0, failedCount = 1, errorMessage = message)
 
     companion object {
-        const val SCOPE = "https://www.googleapis.com/auth/firebase.messaging"
+        /** Sending notifications, and reading and writing the project's database for pictures. */
+        const val SCOPE = "https://www.googleapis.com/auth/firebase.messaging " +
+            "https://www.googleapis.com/auth/datastore"
         const val TOPIC_PREFIX = "cam_"
         private const val TTL_SECONDS = 600
         private const val TOKEN_LIFETIME_SECONDS = 3600L
