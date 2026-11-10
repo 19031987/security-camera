@@ -27,6 +27,7 @@ import com.google.android.material.timepicker.TimeFormat
 import com.securitycam.core.alerting.AlertPolicy
 import com.securitycam.core.alerting.ModeSchedule
 import com.google.firebase.FirebaseApp
+import com.securitycam.core.push.FirestorePictures
 import com.securitycam.core.push.PushMessage
 import com.securitycam.core.push.ServiceAccount
 import com.securitycam.core.remote.ViewerServer
@@ -170,6 +171,8 @@ class SettingsActivity : AppCompatActivity() {
         binding.tvPushUnavailable.visibility = if (firebaseReady) View.GONE else View.VISIBLE
         binding.groupPush.visibility = if (firebaseReady) View.VISIBLE else View.GONE
         binding.switchPushArrivals.isChecked = settings.pushNotifyArrivals
+        binding.switchPushFull.isChecked = settings.pushFullPictures
+        binding.groupPushFull.visibility = if (settings.pushFullPictures) View.VISIBLE else View.GONE
         renderPushState()
         binding.switchNotifyPerson.isChecked = settings.notifyPerson
         binding.switchNotifyAnimal.isChecked = settings.notifyAnimal
@@ -328,6 +331,25 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchPushArrivals.setOnCheckedChangeListener { _, isChecked ->
             val cur = app.settingsRepository.getSettings()
             app.settingsRepository.updateSettings(cur.copy(pushNotifyArrivals = isChecked))
+        }
+        binding.switchPushFull.setOnCheckedChangeListener { button, isChecked ->
+            if (!button.isPressed) return@setOnCheckedChangeListener
+            val cur = app.settingsRepository.getSettings()
+            // Storing pictures uses the same key file as sending notifications.
+            if (isChecked && ServiceAccount.parse(cur.pushServiceAccountJson) == null) {
+                button.isChecked = false
+                Toast.makeText(this, R.string.push_full_needs_key, Toast.LENGTH_LONG).show()
+                return@setOnCheckedChangeListener
+            }
+            app.settingsRepository.updateSettings(cur.copy(pushFullPictures = isChecked))
+            binding.groupPushFull.visibility = if (isChecked) View.VISIBLE else View.GONE
+        }
+        binding.btnCopyRules.setOnClickListener {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            clipboard.setPrimaryClip(
+                android.content.ClipData.newPlainText("Firestore rules", FirestorePictures.RULES)
+            )
+            Toast.makeText(this, R.string.push_rules_copied, Toast.LENGTH_LONG).show()
         }
         binding.btnLoadPushKey.setOnClickListener {
             pushKeyPicker.launch(arrayOf("application/json", "application/octet-stream", "text/plain"))

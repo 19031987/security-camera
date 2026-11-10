@@ -332,4 +332,11 @@
     <string name="receiver_history_empty">Nothing yet. Notifications from the camera will be listed here.</string>
     <string name="action_clear_history">Clear list</string>
     <string name="cd_alert_picture">Picture from the camera</string>
+    <!-- Full-size pictures for family phones -->
+    <string name="pref_push_full_title">Full-size pictures</string>
+    <string name="pref_push_full_summary">Family phones get the whole picture, not just a thumbnail. Uses your Firebase database.</string>
+    <string name="push_full_steps">One-time setup in the Firebase console:\n1. Open Build, then Firestore Database, and create a database.\n2. Open its Rules tab, replace the contents with the rules copied by the button below, and publish.</string>
+    <string name="action_copy_rules">Copy database rules</string>
+    <string name="push_rules_copied">Rules copied. Paste them in the Firebase console.</string>
+    <string name="push_full_needs_key">Load the Firebase key file first.</string>
 </resources>

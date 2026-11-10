@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
 import com.securitycam.R
@@ -30,7 +31,9 @@ import com.securitycam.core.push.ReceivedAlert
 import com.securitycam.databinding.ActivityReceiverBinding
 import com.securitycam.databinding.ItemReceivedAlertBinding
 import com.securitycam.service.AlertMessagingService
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Home screen of a phone that receives the camera's notifications. The phone is linked by
@@ -104,8 +107,47 @@ class ReceiverActivity : AppCompatActivity() {
             } else {
                 row.ivReceivedPicture.setImageDrawable(null)
             }
+            if (picture != null || alert.pictureId != null) {
+                row.root.setOnClickListener { openPicture(alert) }
+            }
             binding.listReceived.addView(row.root)
         }
+    }
+
+    /**
+     * Shows an alert's picture large. If only the thumbnail is on this phone and the camera
+     * stored a full-size one, that is fetched first.
+     */
+    private fun openPicture(alert: ReceivedAlert) {
+        val pictureId = alert.pictureId
+        if (alert.isFullPicture || pictureId == null) {
+            showPictureDialog(alert)
+            return
+        }
+        lifecycleScope.launch {
+            val linkCode = app.settingsRepository.getSettings().receiverLinkCode
+            val full = withContext(Dispatchers.IO) {
+                AlertMessagingService.fetchFullPicture(this@ReceiverActivity, linkCode, pictureId)
+            }
+            val updated = if (full != null) app.receivedAlerts.setFullPicture(alert.id, full) else null
+            showPictureDialog(updated ?: alert)
+        }
+    }
+
+    private fun showPictureDialog(alert: ReceivedAlert) {
+        val file = app.receivedAlerts.pictureOf(alert) ?: return
+        val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: return
+        val image = android.widget.ImageView(this).apply {
+            setImageBitmap(bitmap)
+            adjustViewBounds = true
+            contentDescription = getString(R.string.cd_alert_picture)
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(alert.title)
+            .setMessage(EventAdapter.formatTimestamp(alert.time))
+            .setView(image)
+            .setPositiveButton(R.string.action_ok, null)
+            .show()
     }
 
     private fun isLinked(): Boolean = app.settingsRepository.getSettings().receiverLinkCode.isNotEmpty()

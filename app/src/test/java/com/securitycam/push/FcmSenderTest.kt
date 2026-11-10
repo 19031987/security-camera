@@ -103,7 +103,11 @@ class FcmSenderTest {
         assertEquals("RS256", header["alg"].asString)
         val claims = Gson().fromJson(String(decoder.decode(parts[1])), JsonObject::class.java)
         assertEquals("firebase-adminsdk@securitycamera-test.iam.gserviceaccount.com", claims["iss"].asString)
-        assertEquals("https://www.googleapis.com/auth/firebase.messaging", claims["scope"].asString)
+        // Permission to send notifications and to store pictures in the project's database.
+        assertEquals(
+            setOf("https://www.googleapis.com/auth/firebase.messaging", "https://www.googleapis.com/auth/datastore"),
+            claims["scope"].asString.split(" ").toSet()
+        )
         assertEquals(server.url("/token").toString(), claims["aud"].asString)
         assertEquals(now / 1000, claims["iat"].asLong)
         assertEquals(now / 1000 + 3600, claims["exp"].asLong)

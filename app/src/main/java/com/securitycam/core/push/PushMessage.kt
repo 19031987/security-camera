@@ -16,6 +16,9 @@ object PushMessage {
     const val KEY_TIME = "time"
     const val KEY_THUMBNAIL = "thumb"
 
+    /** Id of the full-size picture in the owner's database, when one was stored. */
+    const val KEY_PICTURE_ID = "pic"
+
     const val TYPE_ALERT = "alert"
     const val TYPE_ARRIVAL = "arrival"
     const val TYPE_TEST = "test"
@@ -38,12 +41,20 @@ object PushMessage {
      * Builds the data map. If the text and thumbnail together would be too large the thumbnail
      * is dropped first, then the message is shortened, so something always gets through.
      */
-    fun build(type: String, title: String, message: String, time: Long, thumbnailJpeg: ByteArray?): Map<String, String> {
+    fun build(
+        type: String,
+        title: String,
+        message: String,
+        time: Long,
+        thumbnailJpeg: ByteArray?,
+        pictureId: String? = null
+    ): Map<String, String> {
         val data = LinkedHashMap<String, String>()
         data[KEY_TYPE] = type
         data[KEY_TITLE] = title.take(MAX_TITLE_CHARS)
         data[KEY_MESSAGE] = message.take(MAX_MESSAGE_CHARS)
         data[KEY_TIME] = time.toString()
+        if (pictureId != null && FirestorePictures.isSafeSegment(pictureId)) data[KEY_PICTURE_ID] = pictureId
         if (thumbnailJpeg != null && thumbnailJpeg.isNotEmpty() && thumbnailJpeg.size <= MAX_THUMBNAIL_BYTES) {
             data[KEY_THUMBNAIL] = Base64.getEncoder().encodeToString(thumbnailJpeg)
         }

@@ -12,6 +12,7 @@ import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.securitycam.R
@@ -40,7 +41,11 @@ class AlertMessagingService : FirebaseMessagingService() {
         val expectedTopic = PushMessage.topicFor(settings.receiverLinkCode) ?: return
         if (message.from != "/topics/$expectedTopic") return
 
-        show(this, message.data)
+        // If the camera stored a full-size picture, fetch it now so the notification can show it.
+        val pictureId = message.data[PushMessage.KEY_PICTURE_ID]
+        val fullPicture = if (pictureId != null) fetchFullPicture(this, settings.receiverLinkCode, pictureId) else null
+
+        show(this, message.data, fullPicture)
     }
 
     companion object {
@@ -66,7 +71,20 @@ class AlertMessagingService : FirebaseMessagingService() {
         }
 
         /** Builds and posts the notification for one push message. Returns false if it was dropped. */
-        fun show(context: Context, data: Map<String, String>): Boolean {
+        /** Downloads a full-size picture from the owner's database. Blocks; call off the main thread. */
+        fun fetchFullPicture(context: Context, linkCode: String, pictureId: String): ByteArray? {
+            return try {
+                if (FirebaseApp.getApps(context).isEmpty()) return null
+                val options = FirebaseApp.getInstance().options
+                val projectId = options.projectId ?: return null
+                SecurityCamApp.getInstance().firestorePictures.fetch(projectId, options.apiKey, linkCode, pictureId)
+            } catch (e: Exception) {
+                Log.w(TAG, "Full-size picture not fetched: ${e.message}")
+                null
+            }
+        }
+
+        fun show(context: Context, data: Map<String, String>, fullPicture: ByteArray? = null): Boolean {
             val title = data[PushMessage.KEY_TITLE]?.takeIf { it.isNotBlank() } ?: return false
             val text = data[PushMessage.KEY_MESSAGE].orEmpty()
             val type = data[PushMessage.KEY_TYPE] ?: PushMessage.TYPE_ALERT
@@ -83,7 +101,12 @@ class AlertMessagingService : FirebaseMessagingService() {
 
             // Keep it for the receiver screen's list, whether or not a notification can be shown.
             try {
-                SecurityCamApp.getInstance().receivedAlerts.add(type, title, text, time, PushMessage.thumbnail(data))
+                SecurityCamApp.getInstance().receivedAlerts.add(
+                    type, title, text, time,
+                    pictureJpeg = fullPicture ?: PushMessage.thumbnail(data),
+                    pictureId = data[PushMessage.KEY_PICTURE_ID],
+                    isFullPicture = fullPicture != null
+                )
             } catch (e: Exception) {
                 Log.w(TAG, "Unable to store the received alert: ${e.message}")
             }
@@ -116,7 +139,8 @@ class AlertMessagingService : FirebaseMessagingService() {
                     )
                 )
 
-            val picture = PushMessage.thumbnail(data)?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+            val picture = (fullPicture ?: PushMessage.thumbnail(data))
+                ?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
             if (picture != null) {
                 builder.setLargeIcon(picture).setStyle(
                     NotificationCompat.BigPictureStyle().bigPicture(picture)
