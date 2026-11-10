@@ -22,7 +22,9 @@ data class MotionEventEntity(
     val smsStatus: String = STATUS_DISABLED,
     val emailStatus: String = STATUS_DISABLED,
     /** Names of enrolled household members recognised in this event; null when nobody was. */
-    val recognizedPerson: String? = null
+    val recognizedPerson: String? = null,
+    /** What the on-device model saw moving, e.g. "Person"; null when it couldn't tell. */
+    val detectedLabel: String? = null
 ) {
     companion object {
         const val STATUS_SENT = "SENT"

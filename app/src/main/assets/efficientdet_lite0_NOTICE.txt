@@ -1,0 +1,9 @@
+efficientdet_lite0.tflite
+
+Object-detection model "EfficientDet-Lite0" (int8), used on the device to say what moved
+in a picture (person, animal, vehicle). Nothing is sent off the device.
+
+Source: Google MediaPipe model collection
+        https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/int8/latest/efficientdet_lite0.tflite
+Licence: Apache License 2.0
+         https://www.apache.org/licenses/LICENSE-2.0

@@ -43,6 +43,7 @@ import com.securitycam.core.config.SecuritySettings
 import com.securitycam.core.recognition.FaceMatcher
 import com.securitycam.core.recognition.FaceVerdict
 import com.securitycam.core.recognition.PresenceGate
+import com.securitycam.core.recognition.SceneLabel
 import com.securitycam.core.remote.ViewerServer
 import com.securitycam.core.surveillance.FrameSampler
 import com.securitycam.core.surveillance.LowLightEnhancer
@@ -796,6 +797,16 @@ class SurveillanceService : LifecycleService() {
     }
 
     private suspend fun dispatchCapture(capture: Capture, recognizedPeople: String?, suppressAlert: Boolean) {
+        // Ask the on-device model what moved, looking at the clean picture before boxes are drawn on it.
+        val label = try {
+            app.sceneDetector.detect(
+                capture.bitmap,
+                capture.boxes.map { floatArrayOf(it.left, it.top, it.right, it.bottom) }
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Scene detection failed: ${e.message}")
+            SceneLabel.UNKNOWN
+        }
         val screenshotFile = app.imageStorageManager.saveScreenshot(capture.bitmap, capture.timestamp, capture.boxes)
         val payload = AlertPayload(
             eventId = UUID.randomUUID().toString(),
@@ -805,7 +816,8 @@ class SurveillanceService : LifecycleService() {
             cameraFacing = _liveState.value.cameraFacing,
             isLowLight = capture.isLowLight,
             recognizedPeople = recognizedPeople,
-            suppressAlert = suppressAlert
+            suppressAlert = suppressAlert,
+            detectedLabel = if (label.kind == SceneLabel.Kind.OTHER) null else label.headline
         )
         app.alertCoordinator.onMotionDetected(payload)
         _liveState.value = _liveState.value.copy(lastEventTimestamp = capture.timestamp)

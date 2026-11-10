@@ -116,6 +116,9 @@ dependencies {
     implementation 'com.google.mlkit:face-detection:16.1.6'
     implementation 'org.tensorflow:tensorflow-lite:2.14.0'
 
+    // Google account permission for Drive uploads (Drive itself is called over HTTPS with OkHttp)
+    implementation 'com.google.android.gms:play-services-auth:21.2.0'
+
     // JSON Serialization
     implementation 'com.google.code.gson:gson:2.10.1'
 
@@ -132,4 +135,5 @@ dependencies {
     testImplementation 'androidx.arch.core:core-testing:2.2.0'
     testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0'
     testImplementation 'androidx.room:room-testing:2.6.1'
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
 }

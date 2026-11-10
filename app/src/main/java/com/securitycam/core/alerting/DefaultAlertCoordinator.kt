@@ -32,7 +32,9 @@ class DefaultAlertCoordinator(
     private val smsDispatcher: SmsDispatcher,
     private val emailDispatcher: EmailDispatcher,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val context: Context? = null
+    private val context: Context? = null,
+    private val pictureDispatcher: PictureMessageDispatcher? = null,
+    private val cloudUploader: CloudUploader? = null
 ) : AlertCoordinator {
 
     companion object {
@@ -44,6 +46,7 @@ class DefaultAlertCoordinator(
     private var lastRecordedEventTimestamp: Long = 0L
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+    private val fileNameFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US)
 
     override fun isArmed(): Boolean = settingsRepository.isArmed()
 
@@ -74,7 +77,8 @@ class DefaultAlertCoordinator(
             isLowLight = payload.isLowLight,
             smsStatus = MotionEventEntity.STATUS_DISABLED,
             emailStatus = MotionEventEntity.STATUS_DISABLED,
-            recognizedPerson = payload.recognizedPeople
+            recognizedPerson = payload.recognizedPeople,
+            detectedLabel = payload.detectedLabel
         )
         eventRepository.insertEvent(eventEntity)
 
@@ -131,17 +135,33 @@ class DefaultAlertCoordinator(
 
         var smsResult: DispatchResult? = null
         var emailResult: DispatchResult? = null
+        var smsSentAsPicture = false
 
         val formattedDate = dateFormat.format(Date(payload.timestamp))
         val scorePercent = (payload.motionScore * 100).toInt()
+        // "Person", "Animal (dog)", "Vehicle (car)", or "Motion" when the model couldn't tell.
+        val what = payload.detectedLabel?.takeIf { it.isNotBlank() } ?: "Motion"
 
         // R6: Post high-priority BigPictureStyle notification to CHANNEL_ALERTS
         postLocalAlertNotification(payload, scorePercent, formattedDate)
 
         // Step 5: Multi-channel dispatch
         if (settings.smsEnabled && validPhones.isNotEmpty()) {
-            val smsText = "[SECURITY CAM ALERT] Motion detected at $formattedDate (Score: $scorePercent%, Camera: ${payload.cameraFacing}). Snapshot recorded."
-            val res = smsDispatcher.sendSms(validPhones, smsText)
+            val smsText = "[SECURITY CAM ALERT] $what detected at $formattedDate (Score: $scorePercent%, Camera: ${payload.cameraFacing}). Snapshot recorded."
+            // Picture message first; if the network won't take it, the text still goes out.
+            var res: DispatchResult? = null
+            if (settings.smsSendPicture && pictureDispatcher != null && payload.screenshotFile.length() > 0) {
+                val picture = pictureDispatcher.send(
+                    validPhones, "Security Camera: $what detected at $formattedDate.", payload.screenshotFile
+                )
+                if (picture.isSuccess && picture.failedCount == 0) {
+                    res = picture
+                    smsSentAsPicture = true
+                }
+            }
+            if (res == null) {
+                res = smsDispatcher.sendSms(validPhones, smsText)
+            }
             smsResult = res
             eventRepository.updateSmsStatus(
                 payload.eventId,
@@ -150,11 +170,11 @@ class DefaultAlertCoordinator(
         }
 
         if (settings.emailEnabled && validEmails.isNotEmpty()) {
-            val emailSubject = "[SECURITY ALERT] Motion Detected - Camera ${payload.cameraFacing}"
+            val emailSubject = "[SECURITY ALERT] $what Detected - Camera ${payload.cameraFacing}"
             val emailBody = """
                 <html>
                 <body style="font-family: Arial, sans-serif; color: #333;">
-                    <h2 style="color: #d32f2f;">⚠️ Security Camera Alert: Motion Detected</h2>
+                    <h2 style="color: #d32f2f;">⚠️ Security Camera Alert: $what Detected</h2>
                     <p>Movement was detected by your Android Security Camera.</p>
                     <table style="border-collapse: collapse; width: 100%; max-width: 500px;">
                         <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Timestamp:</td><td style="padding: 8px; border: 1px solid #ddd;">$formattedDate</td></tr>
@@ -175,13 +195,22 @@ class DefaultAlertCoordinator(
             )
         }
 
+        var driveResult: DispatchResult? = null
+        if (settings.driveEnabled && cloudUploader != null) {
+            val name = "alert_" + fileNameFormat.format(Date(payload.timestamp)) +
+                "_" + what.lowercase(Locale.US).replace(Regex("[^a-z0-9]+"), "-").trim('-') + ".jpg"
+            driveResult = cloudUploader.upload(payload.screenshotFile, name)
+        }
+
         AlertDispatchSummary(
             eventId = payload.eventId,
             isArmed = true,
             isSuppressedByCooldown = false,
             smsResult = smsResult,
             emailResult = emailResult,
-            localEventSaved = true
+            localEventSaved = true,
+            smsSentAsPicture = smsSentAsPicture,
+            driveResult = driveResult
         )
     }
 
