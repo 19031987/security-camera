@@ -1,5 +1,6 @@
 package com.securitycam
 
+import com.securitycam.core.push.FirestoreLive
 import com.securitycam.core.push.FirestorePictures
 import com.securitycam.core.push.PictureLedger
 import com.securitycam.core.push.ReceivedAlertStore
@@ -83,6 +84,9 @@ class SecurityCamApp : Application() {
     /** Full-size alert pictures in the owner's Firebase database. */
     val firestorePictures = FirestorePictures()
     lateinit var pictureLedger: PictureLedger
+
+    /** Live pictures for family phones, through the same database. */
+    val firestoreLive = FirestoreLive()
 
     companion object {
         const val TAG = "SecurityCamApp"

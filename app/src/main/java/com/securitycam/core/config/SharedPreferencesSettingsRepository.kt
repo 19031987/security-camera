@@ -68,6 +68,7 @@ class SharedPreferencesSettingsRepository(
         private const val KEY_SCHEDULE_END = "pref_schedule_away_end"
         private const val KEY_SCHEDULE_DAYS = "pref_schedule_away_days"
         private const val KEY_PUSH_FULL_PICTURES = "pref_push_full_pictures"
+        private const val KEY_LIVE_VIEW_ENABLED = "pref_live_view_enabled"
 
         fun create(context: Context): SharedPreferencesSettingsRepository {
             val sp = context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
@@ -163,7 +164,8 @@ class SharedPreferencesSettingsRepository(
             scheduleAwayStartMinutes = prefs.getInt(KEY_SCHEDULE_START, 9 * 60),
             scheduleAwayEndMinutes = prefs.getInt(KEY_SCHEDULE_END, 18 * 60),
             scheduleAwayDays = prefs.getInt(KEY_SCHEDULE_DAYS, 31),
-            pushFullPictures = prefs.getBoolean(KEY_PUSH_FULL_PICTURES, false)
+            pushFullPictures = prefs.getBoolean(KEY_PUSH_FULL_PICTURES, false),
+            liveViewEnabled = prefs.getBoolean(KEY_LIVE_VIEW_ENABLED, false)
         )
     }
 
@@ -223,6 +225,7 @@ class SharedPreferencesSettingsRepository(
             .putInt(KEY_SCHEDULE_END, settings.scheduleAwayEndMinutes)
             .putInt(KEY_SCHEDULE_DAYS, settings.scheduleAwayDays)
             .putBoolean(KEY_PUSH_FULL_PICTURES, settings.pushFullPictures)
+            .putBoolean(KEY_LIVE_VIEW_ENABLED, settings.liveViewEnabled)
             .apply()
     }
 

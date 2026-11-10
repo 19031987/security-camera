@@ -339,4 +339,15 @@
     <string name="action_copy_rules">Copy database rules</string>
     <string name="push_rules_copied">Rules copied. Paste them in the Firebase console.</string>
     <string name="push_full_needs_key">Load the Firebase key file first.</string>
+    <!-- Live view for family phones -->
+    <string name="pref_live_title">Live view for family phones</string>
+    <string name="pref_live_summary">Linked phones can watch live pictures, about one a second, from anywhere. Uses the same Firebase database and rules as full-size pictures.</string>
+    <string name="title_live_view">Live view</string>
+    <string name="action_watch_live">Watch live</string>
+    <string name="live_connecting">Asking the camera for a picture…</string>
+    <string name="live_watching">Live. A new picture arrives about every second.</string>
+    <string name="live_stalled">No new picture for a while. Check that the camera phone is on, online and has live view switched on.</string>
+    <string name="live_request_failed">Couldn\'t reach the database. Check this phone\'s internet connection and that the database rules were published.</string>
+    <string name="live_unavailable">Live view needs this phone to be linked first.</string>
+    <string name="cd_live_picture">Live picture from the camera</string>
 </resources>

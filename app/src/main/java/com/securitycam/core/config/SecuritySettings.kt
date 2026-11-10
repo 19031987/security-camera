@@ -72,7 +72,9 @@ data class SecuritySettings(
     /** Weekdays with an Away window, as bits: Monday = 1 … Sunday = 64. Default Monday to Friday. */
     val scheduleAwayDays: Int = 31,
     /** Store full-size alert pictures in the owner's Firebase database for family phones. */
-    val pushFullPictures: Boolean = false
+    val pushFullPictures: Boolean = false,
+    /** Let linked family phones watch live pictures through the owner's Firebase database. */
+    val liveViewEnabled: Boolean = false
 ) {
     companion object {
         const val ROLE_CAMERA = "CAMERA"

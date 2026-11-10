@@ -172,7 +172,10 @@ class SettingsActivity : AppCompatActivity() {
         binding.groupPush.visibility = if (firebaseReady) View.VISIBLE else View.GONE
         binding.switchPushArrivals.isChecked = settings.pushNotifyArrivals
         binding.switchPushFull.isChecked = settings.pushFullPictures
-        binding.groupPushFull.visibility = if (settings.pushFullPictures) View.VISIBLE else View.GONE
+        binding.switchLiveView.isChecked = settings.liveViewEnabled
+        // Both features need the same database setup, so the instructions show for either.
+        binding.groupPushFull.visibility =
+            if (settings.pushFullPictures || settings.liveViewEnabled) View.VISIBLE else View.GONE
         renderPushState()
         binding.switchNotifyPerson.isChecked = settings.notifyPerson
         binding.switchNotifyAnimal.isChecked = settings.notifyAnimal
@@ -342,7 +345,20 @@ class SettingsActivity : AppCompatActivity() {
                 return@setOnCheckedChangeListener
             }
             app.settingsRepository.updateSettings(cur.copy(pushFullPictures = isChecked))
-            binding.groupPushFull.visibility = if (isChecked) View.VISIBLE else View.GONE
+            binding.groupPushFull.visibility =
+                if (isChecked || cur.liveViewEnabled) View.VISIBLE else View.GONE
+        }
+        binding.switchLiveView.setOnCheckedChangeListener { button, isChecked ->
+            if (!button.isPressed) return@setOnCheckedChangeListener
+            val cur = app.settingsRepository.getSettings()
+            if (isChecked && ServiceAccount.parse(cur.pushServiceAccountJson) == null) {
+                button.isChecked = false
+                Toast.makeText(this, R.string.push_full_needs_key, Toast.LENGTH_LONG).show()
+                return@setOnCheckedChangeListener
+            }
+            app.settingsRepository.updateSettings(cur.copy(liveViewEnabled = isChecked))
+            binding.groupPushFull.visibility =
+                if (isChecked || cur.pushFullPictures) View.VISIBLE else View.GONE
         }
         binding.btnCopyRules.setOnClickListener {
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager

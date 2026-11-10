@@ -123,13 +123,25 @@ class FirestorePictures(
         /** Ids and codes go into a web address, so only plain letters and digits are accepted. */
         fun isSafeSegment(value: String): Boolean = SEGMENT.matches(value)
 
-        /** The database rules the owner pastes into the Firebase console. */
+        /**
+         * The database rules the owner pastes into the Firebase console. A link-code holder may
+         * fetch one picture by its address, fetch the current live picture, and leave a short
+         * "I am watching" note. Nothing can be listed, and only the camera can write pictures.
+         */
         val RULES = """
             rules_version = '2';
             service cloud.firestore {
               match /databases/{database}/documents {
                 match /cams/{code}/pictures/{picture} {
                   allow get: if true;
+                }
+                match /cams/{code}/live/frame {
+                  allow get: if true;
+                }
+                match /cams/{code}/live/request {
+                  allow create, update: if request.resource.data.keys().hasOnly(['nonce'])
+                    && request.resource.data.nonce is string
+                    && request.resource.data.nonce.size() <= 40;
                 }
               }
             }
