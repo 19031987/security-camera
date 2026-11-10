@@ -250,4 +250,53 @@
     <string name="pref_notify_vehicle">Vehicles</string>
     <string name="pref_notify_other">Other movement</string>
     <string name="pref_notify_other_summary">Anything the camera can\'t name, such as curtains or shadows. In the dark this always alerts, because the camera may not be able to tell what moved.</string>
+    <!-- Camera or receiver -->
+    <string name="role_dialog_title">How will you use this phone?</string>
+    <string name="role_dialog_message">Install this app on every phone. One stays at home as the camera. The others are the phones you and your family carry, which receive its notifications.</string>
+    <string name="role_camera">As the camera</string>
+    <string name="role_receiver">To receive notifications</string>
+
+    <!-- Push notifications: camera side -->
+    <string name="pref_category_push">Phone notifications</string>
+    <string name="pref_push_enable_title">Notify linked phones</string>
+    <string name="pref_push_enable_summary">Instant notifications on your and your family\'s phones, anywhere.</string>
+    <string name="push_unavailable">This build has no Firebase configuration, so phone notifications aren\'t available.</string>
+    <string name="push_key_title">Firebase key file</string>
+    <string name="push_key_missing">Not loaded. In the Firebase console open Project settings, Service accounts, and generate a new private key. Copy that file to this phone and load it here.</string>
+    <string name="push_key_loaded">Loaded for project %1$s.</string>
+    <string name="push_key_invalid">That isn\'t a Firebase service-account key file.</string>
+    <string name="push_key_rejected">Google didn\'t accept the key: %1$s</string>
+    <string name="push_key_checking">Checking the key with Google…</string>
+    <string name="action_load_key">Load key file</string>
+    <string name="action_remove_key">Remove key</string>
+    <string name="push_link_title">Link code</string>
+    <string name="push_link_helper">Enter this on each phone that should get notifications. Anyone with the code can receive them, so share it only with family.</string>
+    <string name="action_share_code">Share code</string>
+    <string name="action_new_code">New code</string>
+    <string name="push_new_code_title">Create a new code?</string>
+    <string name="push_new_code_message">Phones linked with the old code will stop getting notifications until the new code is entered on them.</string>
+    <string name="push_share_text">Security Camera link code: %1$s\nInstall the Security Camera app, choose \"To receive notifications\" and enter this code.</string>
+    <string name="pref_push_arrivals_title">Tell me when family arrives</string>
+    <string name="pref_push_arrivals_summary">A quiet notification when someone enrolled under Known people is recognised.</string>
+    <string name="pref_push_note">Notifications carry a small picture. They are delivered by Google through your own Firebase project and need internet on this phone.</string>
+    <string name="test_push_ok">Phone notification: sent.</string>
+    <string name="test_push_failed">Phone notification: failed. %1$s</string>
+
+    <!-- Push notifications: receiver side -->
+    <string name="title_receiver">Notifications</string>
+    <string name="receiver_intro">This phone shows notifications from your security camera. On the camera phone, open Settings, then Phone notifications, and use the link code shown there.</string>
+    <string name="receiver_code_title">Link code</string>
+    <string name="error_receiver_code">Enter the 24-character code from the camera phone.</string>
+    <string name="action_receiver_link">Link this phone</string>
+    <string name="action_receiver_unlink">Unlink</string>
+    <string name="receiver_status_unlinked">Not linked.</string>
+    <string name="receiver_status_linking">Linking…</string>
+    <string name="receiver_status_linked">Linked. Notifications from the camera will appear on this phone.</string>
+    <string name="receiver_status_failed">Couldn\'t link: %1$s</string>
+    <string name="receiver_notifications_off">Notifications are switched off for this app, so alerts can\'t be shown. Allow them in the phone\'s settings.</string>
+    <string name="receiver_last_alert">Last notification: %1$s (%2$s)</string>
+    <string name="receiver_battery_note">If notifications arrive late, allow this app to run in the background.</string>
+    <string name="action_use_as_camera">Use this phone as the camera instead</string>
+    <string name="channel_arrival_name">Family arrivals</string>
+    <string name="channel_arrival_desc">Quiet notifications when a household member is recognised</string>
 </resources>

@@ -56,6 +56,12 @@ class SharedPreferencesSettingsRepository(
         private const val KEY_ZONE_TOP = "pref_zone_top"
         private const val KEY_ZONE_RIGHT = "pref_zone_right"
         private const val KEY_ZONE_BOTTOM = "pref_zone_bottom"
+        private const val KEY_PUSH_ENABLED = "pref_push_enabled"
+        private const val KEY_PUSH_LINK_CODE = "pref_push_link_code"
+        private const val KEY_PUSH_SERVICE_ACCOUNT = "pref_push_service_account"
+        private const val KEY_PUSH_ARRIVALS = "pref_push_arrivals"
+        private const val KEY_DEVICE_ROLE = "pref_device_role"
+        private const val KEY_RECEIVER_LINK_CODE = "pref_receiver_link_code"
 
         fun create(context: Context): SharedPreferencesSettingsRepository {
             val sp = context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
@@ -139,7 +145,13 @@ class SharedPreferencesSettingsRepository(
             zoneLeft = prefs.getFloat(KEY_ZONE_LEFT, 0f),
             zoneTop = prefs.getFloat(KEY_ZONE_TOP, 0f),
             zoneRight = prefs.getFloat(KEY_ZONE_RIGHT, 1f),
-            zoneBottom = prefs.getFloat(KEY_ZONE_BOTTOM, 1f)
+            zoneBottom = prefs.getFloat(KEY_ZONE_BOTTOM, 1f),
+            pushEnabled = prefs.getBoolean(KEY_PUSH_ENABLED, false),
+            pushLinkCode = securePrefs.getString(KEY_PUSH_LINK_CODE, "") ?: "",
+            pushServiceAccountJson = securePrefs.getString(KEY_PUSH_SERVICE_ACCOUNT, "") ?: "",
+            pushNotifyArrivals = prefs.getBoolean(KEY_PUSH_ARRIVALS, true),
+            deviceRole = prefs.getString(KEY_DEVICE_ROLE, "") ?: "",
+            receiverLinkCode = securePrefs.getString(KEY_RECEIVER_LINK_CODE, "") ?: ""
         )
     }
 
@@ -148,6 +160,9 @@ class SharedPreferencesSettingsRepository(
         securePrefs.edit()
             .putString(KEY_SMTP_PASSWORD, settings.smtpPassword)
             .putString(KEY_REMOTE_VIEW_PASSWORD, settings.remoteViewPassword)
+            .putString(KEY_PUSH_LINK_CODE, settings.pushLinkCode)
+            .putString(KEY_PUSH_SERVICE_ACCOUNT, settings.pushServiceAccountJson)
+            .putString(KEY_RECEIVER_LINK_CODE, settings.receiverLinkCode)
             .apply()
 
         prefs.edit()
@@ -187,6 +202,9 @@ class SharedPreferencesSettingsRepository(
             .putFloat(KEY_ZONE_TOP, settings.zoneTop)
             .putFloat(KEY_ZONE_RIGHT, settings.zoneRight)
             .putFloat(KEY_ZONE_BOTTOM, settings.zoneBottom)
+            .putBoolean(KEY_PUSH_ENABLED, settings.pushEnabled)
+            .putBoolean(KEY_PUSH_ARRIVALS, settings.pushNotifyArrivals)
+            .putString(KEY_DEVICE_ROLE, settings.deviceRole)
             .apply()
     }
 

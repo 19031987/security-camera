@@ -105,6 +105,22 @@
                 android:value="com.securitycam.ui.MainActivity" />
         </activity>
 
+        <!-- Receives push notifications from the camera phone (receiver role) -->
+        <service
+            android:name="com.securitycam.service.AlertMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <activity
+            android:name="com.securitycam.ui.ReceiverActivity"
+            android:exported="false"
+            android:label="@string/title_receiver"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="stateHidden" />
+
         <!-- Enrolment of household members for known-people recognition -->
         <activity
             android:name="com.securitycam.ui.KnownPeopleActivity"

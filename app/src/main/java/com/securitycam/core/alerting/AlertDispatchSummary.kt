@@ -15,5 +15,6 @@ data class AlertDispatchSummary(
     val smsSentAsPicture: Boolean = false,
     val driveResult: DispatchResult? = null,
     /** True when the event was recorded but the alert rules (mode or chosen kinds) kept it quiet. */
-    val isQuietByRules: Boolean = false
+    val isQuietByRules: Boolean = false,
+    val pushResult: DispatchResult? = null
 )

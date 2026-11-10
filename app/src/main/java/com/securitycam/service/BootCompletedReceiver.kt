@@ -1,5 +1,6 @@
 package com.securitycam.service
 
+import com.securitycam.core.config.SecuritySettings
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -27,6 +28,12 @@ class BootCompletedReceiver : BroadcastReceiver() {
                 SecurityCamApp.getInstance().settingsRepository
             } catch (e: Exception) {
                 SharedPreferencesSettingsRepository.create(context)
+            }
+
+            if (settingsRepo.getSettings().deviceRole == SecuritySettings.ROLE_RECEIVER) {
+                // A receiver phone only shows notifications; it must not start its own camera.
+                Log.i(TAG, "Receiver role. Camera auto-start skipped.")
+                return
             }
 
             val armed = settingsRepo.isArmed()

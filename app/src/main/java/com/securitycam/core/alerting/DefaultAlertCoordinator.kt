@@ -1,5 +1,7 @@
 package com.securitycam.core.alerting
 
+import com.securitycam.core.push.PushMessage
+import com.securitycam.core.push.PushNotifier
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
@@ -34,13 +36,23 @@ class DefaultAlertCoordinator(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val context: Context? = null,
     private val pictureDispatcher: PictureMessageDispatcher? = null,
-    private val cloudUploader: CloudUploader? = null
+    private val cloudUploader: CloudUploader? = null,
+    private val pushNotifier: PushNotifier? = null
 ) : AlertCoordinator {
 
     companion object {
         const val TAG = "DefaultAlertCoordinator"
         const val BURST_DEBOUNCE_MS = 3000L
+
+        /** A household member moving around is announced at most once in this period. */
+        const val ARRIVAL_PUSH_INTERVAL_MS = 10 * 60 * 1000L
     }
+
+    @Volatile
+    private var lastArrivalPushAt: Long = 0L
+
+    @Volatile
+    private var lastArrivalPushNames: String? = null
 
     @Volatile
     private var lastRecordedEventTimestamp: Long = 0L
@@ -99,6 +111,7 @@ class DefaultAlertCoordinator(
         if (payload.suppressAlert) {
             eventRepository.updateSmsStatus(payload.eventId, MotionEventEntity.STATUS_KNOWN_PERSON)
             eventRepository.updateEmailStatus(payload.eventId, MotionEventEntity.STATUS_KNOWN_PERSON)
+            val arrivalPush = sendArrivalPush(payload)
 
             return@withContext AlertDispatchSummary(
                 eventId = payload.eventId,
@@ -107,7 +120,8 @@ class DefaultAlertCoordinator(
                 smsResult = null,
                 emailResult = null,
                 localEventSaved = true,
-                isSuppressedByKnownPerson = true
+                isSuppressedByKnownPerson = true,
+                pushResult = arrivalPush
             )
         }
 
@@ -214,6 +228,18 @@ class DefaultAlertCoordinator(
             )
         }
 
+        // Push notification to the linked phones.
+        var pushResult: DispatchResult? = null
+        if (settings.pushEnabled && pushNotifier != null) {
+            pushResult = pushNotifier.notify(
+                PushMessage.TYPE_ALERT,
+                if (what == "Motion") "Movement at your door" else "$what at your door",
+                "Detected at $formattedDate.",
+                payload.timestamp,
+                payload.screenshotFile
+            )
+        }
+
         var driveResult: DispatchResult? = null
         if (settings.driveEnabled && cloudUploader != null) {
             val name = "alert_" + fileNameFormat.format(Date(payload.timestamp)) +
@@ -229,7 +255,8 @@ class DefaultAlertCoordinator(
             emailResult = emailResult,
             localEventSaved = true,
             smsSentAsPicture = smsSentAsPicture,
-            driveResult = driveResult
+            driveResult = driveResult,
+            pushResult = pushResult
         )
     }
 
@@ -264,13 +291,53 @@ class DefaultAlertCoordinator(
             emailResult = emailDispatcher.sendEmail(validEmails, subject, html, null)
         }
 
+        var pushResult: DispatchResult? = null
+        if (settings.pushEnabled && pushNotifier != null) {
+            pushResult = pushNotifier.notify(
+                PushMessage.TYPE_TEST,
+                "Security Camera test",
+                "Phone notifications are working. Sent at $formattedDate.",
+                now,
+                null
+            )
+        }
+
         AlertDispatchSummary(
             eventId = testId,
             isArmed = isArmed(),
             isSuppressedByCooldown = false,
             smsResult = smsResult,
             emailResult = emailResult,
-            localEventSaved = false
+            localEventSaved = false,
+            pushResult = pushResult
+        )
+    }
+
+    /**
+     * A quiet "<name> is home" notification for a recognised household member, at most once
+     * per [ARRIVAL_PUSH_INTERVAL_MS] for the same people. Only in Away mode: in Home mode
+     * somebody is already in, so arrivals aren't news.
+     */
+    private suspend fun sendArrivalPush(payload: AlertPayload): DispatchResult? {
+        val notifier = pushNotifier ?: return null
+        val names = payload.recognizedPeople?.takeIf { it.isNotBlank() } ?: return null
+        val settings = settingsRepository.getSettings()
+        if (!settings.pushEnabled || !settings.pushNotifyArrivals || settings.alertMode == AlertPolicy.MODE_HOME) {
+            return null
+        }
+        val recentlyAnnounced = names == lastArrivalPushNames &&
+            payload.timestamp - lastArrivalPushAt < ARRIVAL_PUSH_INTERVAL_MS
+        if (recentlyAnnounced) return null
+
+        lastArrivalPushAt = payload.timestamp
+        lastArrivalPushNames = names
+        val verb = if (names.contains(",")) "are" else "is"
+        return notifier.notify(
+            PushMessage.TYPE_ARRIVAL,
+            "$names $verb home",
+            "Recognised at ${dateFormat.format(Date(payload.timestamp))}.",
+            payload.timestamp,
+            payload.screenshotFile
         )
     }
 

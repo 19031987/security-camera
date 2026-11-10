@@ -50,5 +50,22 @@ data class SecuritySettings(
     val zoneLeft: Float = 0f,
     val zoneTop: Float = 0f,
     val zoneRight: Float = 1f,
-    val zoneBottom: Float = 1f
-)
+    val zoneBottom: Float = 1f,
+    /** Send push notifications to linked phones through the owner's Firebase project. */
+    val pushEnabled: Boolean = false,
+    /** Camera role: the code family phones enter to receive this camera's notifications. Secret. */
+    val pushLinkCode: String = "",
+    /** Camera role: the Firebase service-account key file's contents. Secret. */
+    val pushServiceAccountJson: String = "",
+    /** Also send a quiet notification when an enrolled household member is recognised. */
+    val pushNotifyArrivals: Boolean = true,
+    /** What this phone is for: "CAMERA", "RECEIVER", or empty until chosen on first launch. */
+    val deviceRole: String = "",
+    /** Receiver role: the camera's link code this phone is subscribed with. Secret. */
+    val receiverLinkCode: String = ""
+) {
+    companion object {
+        const val ROLE_CAMERA = "CAMERA"
+        const val ROLE_RECEIVER = "RECEIVER"
+    }
+}

@@ -10,3 +10,9 @@ build/
 .cxx
 *.apk
 output.json
+
+# Firebase app configuration: each owner supplies their own (the repo is public)
+app/google-services.json
+# Service-account keys must never be committed
+*service-account*.json
+*firebase-adminsdk*.json

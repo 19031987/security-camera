@@ -18,7 +18,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import coil.load
 import com.securitycam.R
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.securitycam.SecurityCamApp
+import com.securitycam.core.config.SecuritySettings
 import com.securitycam.core.alerting.AlertPolicy
 import com.securitycam.core.surveillance.MotionZone
 import com.securitycam.core.storage.MotionEventEntity
@@ -51,9 +53,21 @@ class MainActivity : AppCompatActivity() {
         updateUiState(SurveillanceService.liveState.value)
     }
 
+    /** True when this phone is set up to receive notifications rather than to be the camera. */
+    private var isReceiverPhone = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+
+        val role = SecurityCamApp.getInstance().settingsRepository.getSettings().deviceRole
+        if (role == SecuritySettings.ROLE_RECEIVER) {
+            // A receiver phone never opens its own camera.
+            isReceiverPhone = true
+            startActivity(Intent(this, ReceiverActivity::class.java))
+            finish()
+            return
+        }
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -63,11 +77,37 @@ class MainActivity : AppCompatActivity() {
         setupClickListeners()
         observeSurveillanceState()
         observeLatestEvent()
-        checkAndRequestPermissions()
+        if (role.isEmpty()) {
+            askHowThisPhoneIsUsed()
+        } else {
+            checkAndRequestPermissions()
+        }
+    }
+
+    /** First launch: the same app is installed on the camera phone and on the family's phones. */
+    private fun askHowThisPhoneIsUsed() {
+        val repository = SecurityCamApp.getInstance().settingsRepository
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.role_dialog_title)
+            .setMessage(R.string.role_dialog_message)
+            .setCancelable(false)
+            .setPositiveButton(R.string.role_camera) { _, _ ->
+                repository.updateSettings(repository.getSettings().copy(deviceRole = SecuritySettings.ROLE_CAMERA))
+                checkAndRequestPermissions()
+            }
+            .setNegativeButton(R.string.role_receiver) { _, _ ->
+                repository.updateSettings(repository.getSettings().copy(deviceRole = SecuritySettings.ROLE_RECEIVER))
+                isReceiverPhone = true
+                SurveillanceService.stopService(this)
+                startActivity(Intent(this, ReceiverActivity::class.java))
+                finish()
+            }
+            .show()
     }
 
     override fun onResume() {
         super.onResume()
+        if (isReceiverPhone) return
         binding.bottomNav.root.menu.findItem(R.id.nav_live).isChecked = true
         updatePermissionCard()
         if (!binding.motionZoneView.isEditing) loadZone()
@@ -79,6 +119,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        if (isReceiverPhone) return
         // Detach surface provider when UI is not visible, allowing background service to continue ImageAnalysis
         SurveillanceService.activeSurfaceProvider = null
     }
