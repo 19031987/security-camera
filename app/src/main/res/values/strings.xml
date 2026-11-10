@@ -306,4 +306,30 @@
     <string name="action_play_clip">Play clip</string>
     <string name="clip_missing">The clip is no longer on this phone.</string>
     <string name="clip_no_player">No app on this phone can play the clip.</string>
+    <!-- Mode schedule -->
+    <string name="pref_category_schedule">Mode schedule</string>
+    <string name="pref_schedule_title">Switch modes by the clock</string>
+    <string name="pref_schedule_summary">Away during the hours below on the chosen days, Home the rest of the time.</string>
+    <string name="schedule_away_from">Away from</string>
+    <string name="schedule_away_until">Until</string>
+    <string name="schedule_days_label">On these days</string>
+    <string name="schedule_overnight_note">The end time is earlier than the start, so each window runs overnight into the next day.</string>
+    <string name="schedule_error_same_time">Start and end can\'t be the same time.</string>
+    <string name="schedule_error_no_days">Choose at least one day.</string>
+    <string name="schedule_now">Right now: %1$s.</string>
+    <string name="schedule_turned_off">The schedule is now off because you chose a mode by hand. Turn it back on in Settings.</string>
+    <string name="status_scheduled">%1$s (scheduled)</string>
+    <string name="day_mon">Mon</string>
+    <string name="day_tue">Tue</string>
+    <string name="day_wed">Wed</string>
+    <string name="day_thu">Thu</string>
+    <string name="day_fri">Fri</string>
+    <string name="day_sat">Sat</string>
+    <string name="day_sun">Sun</string>
+
+    <!-- Alert history on family phones -->
+    <string name="receiver_history_title">Recent notifications</string>
+    <string name="receiver_history_empty">Nothing yet. Notifications from the camera will be listed here.</string>
+    <string name="action_clear_history">Clear list</string>
+    <string name="cd_alert_picture">Picture from the camera</string>
 </resources>

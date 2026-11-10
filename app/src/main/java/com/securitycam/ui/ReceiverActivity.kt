@@ -9,6 +9,8 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.graphics.BitmapFactory
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -24,7 +26,9 @@ import com.securitycam.R
 import com.securitycam.SecurityCamApp
 import com.securitycam.core.config.SecuritySettings
 import com.securitycam.core.push.PushMessage
+import com.securitycam.core.push.ReceivedAlert
 import com.securitycam.databinding.ActivityReceiverBinding
+import com.securitycam.databinding.ItemReceivedAlertBinding
 import com.securitycam.service.AlertMessagingService
 import kotlinx.coroutines.launch
 
@@ -55,6 +59,13 @@ class ReceiverActivity : AppCompatActivity() {
         binding.btnReceiverBattery.setOnClickListener { requestBatteryExemption() }
         binding.btnUseAsCamera.setOnClickListener { switchToCamera() }
 
+        binding.btnClearReceived.setOnClickListener { app.receivedAlerts.clear() }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                app.receivedAlerts.alerts.collect { renderReceived(it) }
+            }
+        }
+
         AlertMessagingService.loadLastAlert(this)
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -76,6 +87,25 @@ class ReceiverActivity : AppCompatActivity() {
         val exempt = (getSystemService(Context.POWER_SERVICE) as PowerManager)
             .isIgnoringBatteryOptimizations(packageName)
         binding.btnReceiverBattery.visibility = if (exempt) View.GONE else View.VISIBLE
+    }
+
+    private fun renderReceived(alerts: List<ReceivedAlert>) {
+        binding.tvReceivedEmpty.visibility = if (alerts.isEmpty()) View.VISIBLE else View.GONE
+        binding.btnClearReceived.visibility = if (alerts.isEmpty()) View.GONE else View.VISIBLE
+        binding.listReceived.removeAllViews()
+        val inflater = LayoutInflater.from(this)
+        for (alert in alerts) {
+            val row = ItemReceivedAlertBinding.inflate(inflater, binding.listReceived, false)
+            row.tvReceivedTitle.text = alert.title
+            row.tvReceivedTime.text = EventAdapter.formatTimestamp(alert.time)
+            val picture = app.receivedAlerts.pictureOf(alert)
+            if (picture != null) {
+                row.ivReceivedPicture.setImageBitmap(BitmapFactory.decodeFile(picture.absolutePath))
+            } else {
+                row.ivReceivedPicture.setImageDrawable(null)
+            }
+            binding.listReceived.addView(row.root)
+        }
     }
 
     private fun isLinked(): Boolean = app.settingsRepository.getSettings().receiverLinkCode.isNotEmpty()

@@ -81,6 +81,13 @@ class AlertMessagingService : FirebaseMessagingService() {
                 .apply()
             _lastAlert.value = LastAlert(title, time)
 
+            // Keep it for the receiver screen's list, whether or not a notification can be shown.
+            try {
+                SecurityCamApp.getInstance().receivedAlerts.add(type, title, text, time, PushMessage.thumbnail(data))
+            } catch (e: Exception) {
+                Log.w(TAG, "Unable to store the received alert: ${e.message}")
+            }
+
             val allowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
                 PackageManager.PERMISSION_GRANTED

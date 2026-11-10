@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -177,7 +178,12 @@ class MainActivity : AppCompatActivity() {
                 R.id.btnModeOff -> SurveillanceService.disarmCamera(this)
                 R.id.btnModeAway, R.id.btnModeHome -> {
                     val mode = if (checkedId == R.id.btnModeHome) AlertPolicy.MODE_HOME else AlertPolicy.MODE_AWAY
-                    repository.updateSettings(repository.getSettings().copy(alertMode = mode, isArmed = true))
+                    // Choosing a mode by hand takes over from the timetable.
+                    val before = repository.getSettings()
+                    if (before.scheduleEnabled) {
+                        Toast.makeText(this, R.string.schedule_turned_off, Toast.LENGTH_LONG).show()
+                    }
+                    repository.updateSettings(before.copy(alertMode = mode, isArmed = true, scheduleEnabled = false))
                     SurveillanceService.armCamera(this)
                     // Switching between Away and Home doesn't change the armed state, so refresh here.
                     updateUiState(SurveillanceService.liveState.value.copy(isArmed = true))
@@ -294,7 +300,7 @@ class MainActivity : AppCompatActivity() {
         binding.tvNightBadge.visibility = if (state.isNightVisionActive) View.VISIBLE else View.GONE
 
         // 2. Mode selector follows the real state (it can also change from the notification).
-        val mode = SecurityCamApp.getInstance().settingsRepository.getSettings().alertMode
+        val mode = AlertPolicy.effectiveMode(SecurityCamApp.getInstance().settingsRepository.getSettings())
         val modeButton = when {
             !state.isArmed -> R.id.btnModeOff
             mode == AlertPolicy.MODE_HOME -> R.id.btnModeHome
@@ -336,9 +342,12 @@ class MainActivity : AppCompatActivity() {
                 binding.tvDetectionStatus.setTextColor(ContextCompat.getColor(this, R.color.on_surface_muted))
             }
             state.isArmed -> {
-                binding.tvDetectionStatus.setText(
+                val modeText = getString(
                     if (isHomeMode()) R.string.status_home_quiet else R.string.status_away_watching
                 )
+                val scheduled = SecurityCamApp.getInstance().settingsRepository.getSettings().scheduleEnabled
+                binding.tvDetectionStatus.text =
+                    if (scheduled) getString(R.string.status_scheduled, modeText) else modeText
                 binding.tvDetectionStatus.setTextColor(ContextCompat.getColor(this, R.color.on_surface))
             }
             else -> {
@@ -349,7 +358,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun isHomeMode(): Boolean =
-        SecurityCamApp.getInstance().settingsRepository.getSettings().alertMode == AlertPolicy.MODE_HOME
+        AlertPolicy.effectiveMode(SecurityCamApp.getInstance().settingsRepository.getSettings()) ==
+            AlertPolicy.MODE_HOME
 
     /** Swaps the control panel for the zone editor and saves the zone when editing ends. */
     private fun setZoneEditing(editing: Boolean) {

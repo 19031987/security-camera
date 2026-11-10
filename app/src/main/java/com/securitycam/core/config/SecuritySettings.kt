@@ -64,7 +64,13 @@ data class SecuritySettings(
     /** Receiver role: the camera's link code this phone is subscribed with. Secret. */
     val receiverLinkCode: String = "",
     /** Record a short video clip of each event on the camera phone. */
-    val recordClips: Boolean = true
+    val recordClips: Boolean = true,
+    /** Switch between Away and Home by the clock instead of by hand. See ModeSchedule. */
+    val scheduleEnabled: Boolean = false,
+    val scheduleAwayStartMinutes: Int = 9 * 60,
+    val scheduleAwayEndMinutes: Int = 18 * 60,
+    /** Weekdays with an Away window, as bits: Monday = 1 … Sunday = 64. Default Monday to Friday. */
+    val scheduleAwayDays: Int = 31
 ) {
     companion object {
         const val ROLE_CAMERA = "CAMERA"

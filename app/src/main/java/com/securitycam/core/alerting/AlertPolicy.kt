@@ -1,6 +1,7 @@
 package com.securitycam.core.alerting
 
 import com.securitycam.core.config.SecuritySettings
+import java.util.TimeZone
 
 /**
  * Decides whether a recorded event should also notify people.
@@ -15,6 +16,24 @@ object AlertPolicy {
     const val KIND_ANIMAL = "ANIMAL"
     const val KIND_VEHICLE = "VEHICLE"
     const val KIND_OTHER = "OTHER"
+
+    /**
+     * The mode in force at [now]: the timetable's when a valid schedule is switched on,
+     * otherwise the one chosen by hand.
+     */
+    fun effectiveMode(
+        settings: SecuritySettings,
+        now: Long = System.currentTimeMillis(),
+        zone: TimeZone = TimeZone.getDefault()
+    ): String {
+        if (settings.scheduleEnabled) {
+            val schedule = ModeSchedule(
+                settings.scheduleAwayStartMinutes, settings.scheduleAwayEndMinutes, settings.scheduleAwayDays
+            )
+            if (schedule.isValid) return schedule.modeAt(now, zone)
+        }
+        return if (settings.alertMode == MODE_HOME) MODE_HOME else MODE_AWAY
+    }
 
     enum class Verdict {
         ALERT,
@@ -35,8 +54,14 @@ object AlertPolicy {
      *  - the model failed to run at all;
      *  - it is dark and the model recognised nothing, since it may simply not be able to see.
      */
-    fun decide(settings: SecuritySettings, detectedKind: String?, isLowLight: Boolean): Verdict {
-        if (settings.alertMode == MODE_HOME) return Verdict.QUIET_HOME_MODE
+    fun decide(
+        settings: SecuritySettings,
+        detectedKind: String?,
+        isLowLight: Boolean,
+        now: Long = System.currentTimeMillis(),
+        zone: TimeZone = TimeZone.getDefault()
+    ): Verdict {
+        if (effectiveMode(settings, now, zone) == MODE_HOME) return Verdict.QUIET_HOME_MODE
 
         val selected = when (detectedKind) {
             null -> true
