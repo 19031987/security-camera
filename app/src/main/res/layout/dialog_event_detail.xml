@@ -93,10 +93,23 @@
             android:textIsSelectable="true"
             tools:text="Event ID: 3a1b4c-9f8e" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPlayClip"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_lg"
+            android:minHeight="@dimen/touch_target"
+            android:text="@string/action_play_clip"
+            android:visibility="gone"
+            app:icon="@drawable/ic_videocam"
+            app:iconGravity="textStart"
+            tools:visibility="visible" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_xl"
+            android:layout_marginTop="@dimen/space_md"
             android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton

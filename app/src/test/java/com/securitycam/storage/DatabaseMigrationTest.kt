@@ -96,5 +96,46 @@ class DatabaseMigrationTest {
         assertEquals("v2-event", events[0].id)
         assertEquals("Asha", events[0].recognizedPerson)
         assertNull(events[0].detectedLabel)
+        assertNull(events[0].clipPath)
+    }
+
+    @Test
+    fun version3EventsSurviveTheUpgradeAndClipsCanThenBeAttached() {
+        val path = context.getDatabasePath(AppDatabase.DATABASE_NAME)
+        path.parentFile?.mkdirs()
+        SQLiteDatabase.openOrCreateDatabase(path, null).use { db ->
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `motion_events` (`id` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, " +
+                    "`imagePath` TEXT NOT NULL, `motionScore` REAL NOT NULL, `isLowLight` INTEGER NOT NULL, " +
+                    "`smsStatus` TEXT NOT NULL, `emailStatus` TEXT NOT NULL, `recognizedPerson` TEXT, " +
+                    "`detectedLabel` TEXT, PRIMARY KEY(`id`))"
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_motion_events_timestamp` ON `motion_events` (`timestamp`)")
+            db.execSQL(
+                "INSERT INTO motion_events (id, timestamp, imagePath, motionScore, isLowLight, smsStatus, emailStatus, detectedLabel) " +
+                    "VALUES ('v3-a', 1700000000000, '/data/a.jpg', 0.5, 0, 'SENT', 'SENT', 'Person'), " +
+                    "('v3-b', 1700000001000, '/data/b.jpg', 0.5, 0, 'QUIET', 'QUIET', NULL)"
+            )
+            db.version = 3
+        }
+
+        val dao = AppDatabase.getInstance(context).motionEventDao()
+        val events = runBlocking { dao.getAllEvents() }
+        assertEquals(2, events.size)
+        assertEquals("Person", events.first { it.id == "v3-a" }.detectedLabel)
+        assertNull(events[0].clipPath)
+
+        // Two events sharing one clip, then the clip being pruned.
+        runBlocking {
+            dao.updateClipPath("v3-a", "/clips/c1.mp4")
+            dao.updateClipPath("v3-b", "/clips/c1.mp4")
+            assertEquals(2, dao.countEventsWithClip("/clips/c1.mp4"))
+            assertEquals("/clips/c1.mp4", dao.getEventById("v3-a")!!.clipPath)
+            dao.deleteById("v3-a")
+            assertEquals(1, dao.countEventsWithClip("/clips/c1.mp4"))
+            dao.clearClipPath("/clips/c1.mp4")
+            assertNull(dao.getEventById("v3-b")!!.clipPath)
+            assertEquals(0, dao.countEventsWithClip("/clips/c1.mp4"))
+        }
     }
 }

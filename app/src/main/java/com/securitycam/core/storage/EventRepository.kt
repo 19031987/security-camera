@@ -19,4 +19,9 @@ interface EventRepository {
     suspend fun updateSmsStatus(id: String, status: String) {}
     suspend fun updateEmailStatus(id: String, status: String) {}
     suspend fun clearAllEvents() {}
+    suspend fun updateClipPath(id: String, path: String?) {}
+
+    /** Forgets a clip that has been deleted, on every event that pointed at it. */
+    suspend fun clearClipPath(path: String) {}
+    suspend fun countEventsWithClip(path: String): Int = 0
 }

@@ -62,6 +62,7 @@ class SharedPreferencesSettingsRepository(
         private const val KEY_PUSH_ARRIVALS = "pref_push_arrivals"
         private const val KEY_DEVICE_ROLE = "pref_device_role"
         private const val KEY_RECEIVER_LINK_CODE = "pref_receiver_link_code"
+        private const val KEY_RECORD_CLIPS = "pref_record_clips"
 
         fun create(context: Context): SharedPreferencesSettingsRepository {
             val sp = context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
@@ -151,7 +152,8 @@ class SharedPreferencesSettingsRepository(
             pushServiceAccountJson = securePrefs.getString(KEY_PUSH_SERVICE_ACCOUNT, "") ?: "",
             pushNotifyArrivals = prefs.getBoolean(KEY_PUSH_ARRIVALS, true),
             deviceRole = prefs.getString(KEY_DEVICE_ROLE, "") ?: "",
-            receiverLinkCode = securePrefs.getString(KEY_RECEIVER_LINK_CODE, "") ?: ""
+            receiverLinkCode = securePrefs.getString(KEY_RECEIVER_LINK_CODE, "") ?: "",
+            recordClips = prefs.getBoolean(KEY_RECORD_CLIPS, true)
         )
     }
 
@@ -205,6 +207,7 @@ class SharedPreferencesSettingsRepository(
             .putBoolean(KEY_PUSH_ENABLED, settings.pushEnabled)
             .putBoolean(KEY_PUSH_ARRIVALS, settings.pushNotifyArrivals)
             .putString(KEY_DEVICE_ROLE, settings.deviceRole)
+            .putBoolean(KEY_RECORD_CLIPS, settings.recordClips)
             .apply()
     }
 

@@ -62,7 +62,9 @@ data class SecuritySettings(
     /** What this phone is for: "CAMERA", "RECEIVER", or empty until chosen on first launch. */
     val deviceRole: String = "",
     /** Receiver role: the camera's link code this phone is subscribed with. Secret. */
-    val receiverLinkCode: String = ""
+    val receiverLinkCode: String = "",
+    /** Record a short video clip of each event on the camera phone. */
+    val recordClips: Boolean = true
 ) {
     companion object {
         const val ROLE_CAMERA = "CAMERA"

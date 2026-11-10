@@ -152,6 +152,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.groupRemoteFields.visibility = View.VISIBLE
         binding.switchKnownPeople.isChecked = settings.knownPeopleEnabled
         binding.switchSmsPicture.isChecked = settings.smsSendPicture
+        binding.switchClips.isChecked = settings.recordClips
 
         // Phone notifications
         val firebaseReady = FirebaseApp.getApps(this).isNotEmpty()
@@ -344,6 +345,12 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 .setNegativeButton(R.string.action_cancel, null)
                 .show()
+        }
+
+        // Video clips
+        binding.switchClips.setOnCheckedChangeListener { _, isChecked ->
+            val cur = app.settingsRepository.getSettings()
+            app.settingsRepository.updateSettings(cur.copy(recordClips = isChecked))
         }
 
         // Picture messages

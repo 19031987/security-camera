@@ -67,6 +67,17 @@
                     android:textColor="@color/status_night_mode"
                     android:visibility="gone"
                     tools:visibility="visible" />
+
+                <TextView
+                    android:id="@+id/tvClipBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_sm"
+                    android:text="@string/badge_clip"
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                    android:textColor="@color/secondary"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
             </LinearLayout>
 
             <TextView

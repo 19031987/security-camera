@@ -299,4 +299,11 @@
     <string name="action_use_as_camera">Use this phone as the camera instead</string>
     <string name="channel_arrival_name">Family arrivals</string>
     <string name="channel_arrival_desc">Quiet notifications when a household member is recognised</string>
+    <!-- Video clips -->
+    <string name="pref_clips_title">Record video clips</string>
+    <string name="pref_clips_summary">A 15-second video of each event, kept on this phone. The oldest are deleted once 2 GB is used.</string>
+    <string name="badge_clip">Clip</string>
+    <string name="action_play_clip">Play clip</string>
+    <string name="clip_missing">The clip is no longer on this phone.</string>
+    <string name="clip_no_player">No app on this phone can play the clip.</string>
 </resources>
