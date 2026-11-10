@@ -34,5 +34,8 @@ data class MotionEventEntity(
 
         /** No alert was sent because an enrolled household member was recognised. */
         const val STATUS_KNOWN_PERSON = "KNOWN_PERSON"
+
+        /** No alert was sent because of the alert rules: Home mode, or a kind not selected. */
+        const val STATUS_QUIET = "QUIET"
     }
 }

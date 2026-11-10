@@ -19,6 +19,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import coil.load
 import com.securitycam.R
 import com.securitycam.SecurityCamApp
+import com.securitycam.core.alerting.AlertPolicy
+import com.securitycam.core.surveillance.MotionZone
 import com.securitycam.core.storage.MotionEventEntity
 import com.securitycam.databinding.ActivityMainBinding
 import com.securitycam.service.SurveillanceLiveState
@@ -34,6 +36,9 @@ import java.io.File
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+
+    /** True while the mode selector is being set from state rather than by a tap. */
+    private var syncingMode = false
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -65,6 +70,7 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         binding.bottomNav.root.menu.findItem(R.id.nav_live).isChecked = true
         updatePermissionCard()
+        if (!binding.motionZoneView.isEditing) loadZone()
         updateUiState(SurveillanceService.liveState.value)
         if (hasCameraPermission()) {
             startSurveillanceAndAttachPreview()
@@ -111,7 +117,10 @@ class MainActivity : AppCompatActivity() {
     private fun updatePermissionCard() {
         val granted = hasCameraPermission()
         binding.cardPermission.visibility = if (granted) View.GONE else View.VISIBLE
-        binding.fabArmDisarm.isEnabled = granted
+        binding.btnModeAway.isEnabled = granted
+        binding.btnModeHome.isEnabled = granted
+        binding.btnModeOff.isEnabled = granted
+        binding.btnZone.isEnabled = granted
         binding.btnSwitchCamera.isEnabled = granted
         if (!granted) {
             binding.btnToggleTorch.isEnabled = false
@@ -119,9 +128,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
-        binding.fabArmDisarm.setOnClickListener {
-            SurveillanceService.toggleArm(this)
+        binding.toggleMode.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            // Only react to the person's own taps, not to the selection being synced from state.
+            if (!isChecked || syncingMode) return@addOnButtonCheckedListener
+            val repository = SecurityCamApp.getInstance().settingsRepository
+            when (checkedId) {
+                R.id.btnModeOff -> SurveillanceService.disarmCamera(this)
+                R.id.btnModeAway, R.id.btnModeHome -> {
+                    val mode = if (checkedId == R.id.btnModeHome) AlertPolicy.MODE_HOME else AlertPolicy.MODE_AWAY
+                    repository.updateSettings(repository.getSettings().copy(alertMode = mode, isArmed = true))
+                    SurveillanceService.armCamera(this)
+                    // Switching between Away and Home doesn't change the armed state, so refresh here.
+                    updateUiState(SurveillanceService.liveState.value.copy(isArmed = true))
+                }
+            }
         }
+
+        binding.btnZone.setOnClickListener { setZoneEditing(!binding.motionZoneView.isEditing) }
+        binding.btnZoneReset.setOnClickListener { binding.motionZoneView.zone = MotionZone.WHOLE_PICTURE }
+        binding.btnZoneDone.setOnClickListener { setZoneEditing(false) }
 
         binding.btnSwitchCamera.setOnClickListener {
             SurveillanceService.switchCamera(this)
@@ -209,8 +234,11 @@ class MainActivity : AppCompatActivity() {
             isMotion && state.isArmed -> Triple(
                 R.string.status_motion_detected, R.color.status_alert, R.color.status_alert_container
             )
+            state.isArmed && isHomeMode() -> Triple(
+                R.string.status_mode_home, R.color.secondary, R.color.secondary_container
+            )
             state.isArmed -> Triple(
-                R.string.status_armed, R.color.status_armed, R.color.status_armed_container
+                R.string.status_mode_away, R.color.status_armed, R.color.status_armed_container
             )
             else -> Triple(
                 R.string.status_disarmed, R.color.status_disarmed, R.color.status_disarmed_container
@@ -224,15 +252,17 @@ class MainActivity : AppCompatActivity() {
 
         binding.tvNightBadge.visibility = if (state.isNightVisionActive) View.VISIBLE else View.GONE
 
-        // 2. Arm / disarm button. Arming is the highlighted action; disarming is deliberately quieter.
-        if (state.isArmed) {
-            binding.fabArmDisarm.setText(R.string.action_disarm)
-            binding.fabArmDisarm.setIconResource(R.drawable.ic_shield_disarmed)
-            styleArmButton(R.color.surface_container_highest, R.color.on_surface)
-        } else {
-            binding.fabArmDisarm.setText(R.string.action_arm)
-            binding.fabArmDisarm.setIconResource(R.drawable.ic_shield_armed)
-            styleArmButton(R.color.primary, R.color.on_primary)
+        // 2. Mode selector follows the real state (it can also change from the notification).
+        val mode = SecurityCamApp.getInstance().settingsRepository.getSettings().alertMode
+        val modeButton = when {
+            !state.isArmed -> R.id.btnModeOff
+            mode == AlertPolicy.MODE_HOME -> R.id.btnModeHome
+            else -> R.id.btnModeAway
+        }
+        if (binding.toggleMode.checkedButtonId != modeButton) {
+            syncingMode = true
+            binding.toggleMode.check(modeButton)
+            syncingMode = false
         }
 
         // 3. Torch is only available on the back camera
@@ -265,7 +295,9 @@ class MainActivity : AppCompatActivity() {
                 binding.tvDetectionStatus.setTextColor(ContextCompat.getColor(this, R.color.on_surface_muted))
             }
             state.isArmed -> {
-                binding.tvDetectionStatus.setText(R.string.status_monitoring_active)
+                binding.tvDetectionStatus.setText(
+                    if (isHomeMode()) R.string.status_home_quiet else R.string.status_away_watching
+                )
                 binding.tvDetectionStatus.setTextColor(ContextCompat.getColor(this, R.color.on_surface))
             }
             else -> {
@@ -275,11 +307,28 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun styleArmButton(backgroundColor: Int, contentColor: Int) {
-        val content = ColorStateList.valueOf(ContextCompat.getColor(this, contentColor))
-        binding.fabArmDisarm.backgroundTintList =
-            ColorStateList.valueOf(ContextCompat.getColor(this, backgroundColor))
-        binding.fabArmDisarm.setTextColor(content)
-        binding.fabArmDisarm.iconTint = content
+    private fun isHomeMode(): Boolean =
+        SecurityCamApp.getInstance().settingsRepository.getSettings().alertMode == AlertPolicy.MODE_HOME
+
+    /** Swaps the control panel for the zone editor and saves the zone when editing ends. */
+    private fun setZoneEditing(editing: Boolean) {
+        val repository = SecurityCamApp.getInstance().settingsRepository
+        if (!editing && binding.motionZoneView.isEditing) {
+            val zone = binding.motionZoneView.zone
+            repository.updateSettings(
+                repository.getSettings().copy(
+                    zoneLeft = zone.left, zoneTop = zone.top, zoneRight = zone.right, zoneBottom = zone.bottom
+                )
+            )
+        }
+        binding.motionZoneView.isEditing = editing
+        binding.zoneControls.visibility = if (editing) View.VISIBLE else View.GONE
+        binding.bottomControls.visibility = if (editing) View.GONE else View.VISIBLE
+    }
+
+    private fun loadZone() {
+        val settings = SecurityCamApp.getInstance().settingsRepository.getSettings()
+        binding.motionZoneView.zone =
+            MotionZone(settings.zoneLeft, settings.zoneTop, settings.zoneRight, settings.zoneBottom)
     }
 }

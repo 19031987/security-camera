@@ -38,5 +38,17 @@ data class SecuritySettings(
     /** Upload each alert picture to the owner's Google Drive. */
     val driveEnabled: Boolean = false,
     /** Id of the "Security Camera" folder in Drive, remembered after the first upload. */
-    val driveFolderId: String = ""
+    val driveFolderId: String = "",
+    /** "AWAY" sends alerts; "HOME" records events quietly. See AlertPolicy. */
+    val alertMode: String = "AWAY",
+    val notifyPerson: Boolean = true,
+    val notifyAnimal: Boolean = true,
+    val notifyVehicle: Boolean = false,
+    /** Movement the model could not put a name to (curtains, shadows, branches). */
+    val notifyOther: Boolean = false,
+    /** Motion zone, as fractions of the picture. The defaults cover the whole picture. */
+    val zoneLeft: Float = 0f,
+    val zoneTop: Float = 0f,
+    val zoneRight: Float = 1f,
+    val zoneBottom: Float = 1f
 )

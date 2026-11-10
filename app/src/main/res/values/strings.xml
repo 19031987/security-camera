@@ -227,4 +227,27 @@
     <string name="drive_status_needs_connect">Connect your Google account to start uploading.</string>
     <string name="drive_status_failed">Couldn\'t connect: %1$s</string>
     <string name="pref_drive_note">The app can only see the files it uploads, not the rest of your Drive. Uploads need an internet connection on this phone.</string>
+    <!-- Modes -->
+    <string name="mode_away">Away</string>
+    <string name="mode_home">Home</string>
+    <string name="mode_off">Off</string>
+    <string name="status_mode_away">Away</string>
+    <string name="status_mode_home">Home</string>
+    <string name="status_home_quiet">Home mode: recording quietly, no alerts.</string>
+    <string name="status_away_watching">Away mode: you will be alerted.</string>
+
+    <!-- Motion zone -->
+    <string name="action_edit_zone">Motion zone</string>
+    <string name="zone_edit_hint">Drag the corners so the box covers only the area you care about. Movement outside it is ignored.</string>
+    <string name="action_zone_whole">Whole picture</string>
+    <string name="action_zone_done">Done</string>
+
+    <!-- What to notify about -->
+    <string name="pref_category_notify">Notify me about</string>
+    <string name="pref_notify_intro">Everything that moves is recorded in History. These choose what also sends you an alert.</string>
+    <string name="pref_notify_person">People</string>
+    <string name="pref_notify_animal">Animals</string>
+    <string name="pref_notify_vehicle">Vehicles</string>
+    <string name="pref_notify_other">Other movement</string>
+    <string name="pref_notify_other_summary">Anything the camera can\'t name, such as curtains or shadows. In the dark this always alerts, because the camera may not be able to tell what moved.</string>
 </resources>

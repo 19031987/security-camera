@@ -27,6 +27,15 @@
         app:layout_constraintStart_toStartOf="@id/previewView"
         app:layout_constraintTop_toTopOf="@id/previewView" />
 
+    <com.securitycam.ui.MotionZoneView
+        android:id="@+id/motionZoneView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="@id/previewView"
+        app:layout_constraintEnd_toEndOf="@id/previewView"
+        app:layout_constraintStart_toStartOf="@id/previewView"
+        app:layout_constraintTop_toTopOf="@id/previewView" />
+
     <!-- Scrims keep the controls readable over a bright feed -->
     <View
         android:layout_width="0dp"
@@ -111,6 +120,15 @@
             android:layout_width="0dp"
             android:layout_height="1dp"
             android:layout_weight="1" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnZone"
+            style="@style/Widget.SecurityCam.OverlayIconButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="@dimen/space_sm"
+            android:contentDescription="@string/action_edit_zone"
+            app:icon="@drawable/ic_zone" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSwitchCamera"
@@ -217,14 +235,41 @@
                 android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
                 android:textColor="@color/on_surface" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/fabArmDisarm"
-                style="@style/Widget.SecurityCam.PrimaryAction"
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/toggleMode"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_md"
-                android:text="@string/action_disarm"
-                app:icon="@drawable/ic_shield_armed" />
+                app:selectionRequired="true"
+                app:singleSelection="true">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnModeAway"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minHeight="@dimen/primary_action_height"
+                    android:text="@string/mode_away" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnModeHome"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minHeight="@dimen/primary_action_height"
+                    android:text="@string/mode_home" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnModeOff"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minHeight="@dimen/primary_action_height"
+                    android:text="@string/mode_off" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
 
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
@@ -281,6 +326,60 @@
                     android:importantForAccessibility="no"
                     android:src="@drawable/ic_chevron_right"
                     app:tint="@color/on_surface_muted" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Shown instead of the control panel while the motion zone is being edited -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/zoneControls"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="@dimen/space_md"
+        android:layout_marginBottom="@dimen/space_md"
+        android:visibility="gone"
+        app:cardBackgroundColor="@color/panel_scrim"
+        app:cardCornerRadius="@dimen/radius_lg"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="@dimen/space_lg">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/zone_edit_hint"
+                android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                android:textColor="@color/on_surface" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_md"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnZoneReset"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="@dimen/space_sm"
+                    android:layout_weight="1"
+                    android:minHeight="@dimen/touch_target"
+                    android:text="@string/action_zone_whole" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnZoneDone"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minHeight="@dimen/touch_target"
+                    android:text="@string/action_zone_done" />
             </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
