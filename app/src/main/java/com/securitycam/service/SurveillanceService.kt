@@ -31,6 +31,14 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.core.TorchState
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.video.FallbackStrategy
+import androidx.camera.video.FileOutputOptions
+import androidx.camera.video.Quality
+import androidx.camera.video.QualitySelector
+import androidx.camera.video.Recorder
+import androidx.camera.video.Recording
+import androidx.camera.video.VideoCapture
+import androidx.camera.video.VideoRecordEvent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -45,6 +53,7 @@ import com.securitycam.core.recognition.FaceVerdict
 import com.securitycam.core.recognition.PresenceGate
 import com.securitycam.core.recognition.SceneLabel
 import com.securitycam.core.remote.ViewerServer
+import com.securitycam.core.storage.ClipStore
 import com.securitycam.core.surveillance.FrameSampler
 import com.securitycam.core.surveillance.LowLightEnhancer
 import com.securitycam.core.surveillance.LuminanceFrame
@@ -64,6 +73,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.util.UUID
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -115,6 +125,13 @@ class SurveillanceService : LifecycleService() {
 
     // Live web viewer
     private var lastStreamFrameAt = 0L
+
+    // Video clips. Null when this phone's camera can't record while it also analyses frames.
+    private var videoCapture: VideoCapture<Recorder>? = null
+    private val clipLock = Any()
+    private var activeRecording: Recording? = null
+    private var activeClipFile: File? = null
+    private val activeClipEventIds = ArrayList<String>()
 
     // Known-people recognition: one capture may be held back while the camera looks for a face.
     private class Capture(
@@ -449,7 +466,25 @@ class SurveillanceService : LifecycleService() {
                     }
                 }
 
-            camera = provider.bindToLifecycle(this, cameraSelector, previewUseCase, imageAnalysis)
+            // 3. Video clips. Not every phone can record while also previewing and analysing,
+            // so if binding all three fails the camera falls back to running without clips.
+            stopClipRecording()
+            val recorder = Recorder.Builder()
+                .setQualitySelector(
+                    QualitySelector.from(Quality.SD, FallbackStrategy.lowerQualityOrHigherThan(Quality.SD))
+                )
+                .build()
+            val video = VideoCapture.withOutput(recorder)
+            camera = try {
+                provider.bindToLifecycle(this, cameraSelector, previewUseCase, imageAnalysis, video).also {
+                    videoCapture = video
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Video clips unavailable on this camera: ${e.message}")
+                videoCapture = null
+                provider.unbindAll()
+                provider.bindToLifecycle(this, cameraSelector, previewUseCase, imageAnalysis)
+            }
             // A freshly bound camera starts in its normal configuration.
             nightVision.reset()
             nightBoostApplied = false
@@ -833,7 +868,88 @@ class SurveillanceService : LifecycleService() {
             detectedKind = label?.kind?.name
         )
         app.alertCoordinator.onMotionDetected(payload)
+        attachClip(payload.eventId, capture.timestamp)
         _liveState.value = _liveState.value.copy(lastEventTimestamp = capture.timestamp)
+    }
+
+    /**
+     * Gives the event a video clip: joins the clip already being recorded, or starts a new
+     * [ClipStore.CLIP_LENGTH_MS] one. Events that arrive during a clip share it.
+     */
+    private fun attachClip(eventId: String, timestamp: Long) {
+        if (!currentSettings.recordClips) return
+        val capture = videoCapture ?: return
+        synchronized(clipLock) {
+            if (activeRecording != null) {
+                activeClipEventIds.add(eventId)
+                return
+            }
+            val store = app.clipStore
+            if (!store.hasRoomToRecord()) {
+                Log.w(TAG, "Not recording a clip: the phone is nearly out of storage.")
+                return
+            }
+            val file = store.newClipFile(timestamp)
+            try {
+                // Video only: no microphone is used.
+                val recording = capture.output
+                    .prepareRecording(this, FileOutputOptions.Builder(file).build())
+                    .start(ContextCompat.getMainExecutor(this)) { event ->
+                        if (event is VideoRecordEvent.Finalize) onClipFinished(file, event.hasError())
+                    }
+                activeRecording = recording
+                activeClipFile = file
+                activeClipEventIds.clear()
+                activeClipEventIds.add(eventId)
+                lifecycleScope.launch {
+                    delay(ClipStore.CLIP_LENGTH_MS)
+                    synchronized(clipLock) {
+                        if (activeRecording === recording) recording.stop()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Unable to start a clip: ${e.message}")
+                file.delete()
+            }
+        }
+    }
+
+    private fun onClipFinished(file: File, failed: Boolean) {
+        val eventIds: List<String>
+        synchronized(clipLock) {
+            if (activeClipFile?.absolutePath != file.absolutePath) return
+            eventIds = ArrayList(activeClipEventIds)
+            activeRecording = null
+            activeClipFile = null
+            activeClipEventIds.clear()
+        }
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                if (failed || file.length() == 0L) {
+                    file.delete()
+                    return@launch
+                }
+                for (id in eventIds) {
+                    app.eventRepository.updateClipPath(id, file.absolutePath)
+                }
+                // Keep within the storage limit; forget clips that had to go.
+                for (deleted in app.clipStore.prune(keep = file)) {
+                    app.eventRepository.clearClipPath(deleted.absolutePath)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Unable to save the clip: ${e.message}")
+            }
+        }
+    }
+
+    private fun stopClipRecording() {
+        synchronized(clipLock) {
+            try {
+                activeRecording?.stop()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error stopping the clip: ${e.message}")
+            }
+        }
     }
 
     /** Starts or stops the live web viewer to match the settings. */
@@ -905,6 +1021,7 @@ class SurveillanceService : LifecycleService() {
     override fun onDestroy() {
         super.onDestroy()
         stopPatrolMode()
+        stopClipRecording()
         try {
             app.viewerServer.stop()
         } catch (e: Exception) {

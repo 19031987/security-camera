@@ -75,6 +75,11 @@ class EventDetailDialog : BottomSheetDialogFragment() {
         binding.chipDetailEmail.text = EventAdapter.formatStatusChipText("Email", currentEvent.emailStatus)
         binding.chipDetailEmail.setTextColor(EventAdapter.getStatusChipColor(currentEvent.emailStatus))
 
+        // Video clip, played in the phone's own video player
+        val clipPath = currentEvent.clipPath
+        binding.btnPlayClip.visibility = if (clipPath.isNullOrEmpty()) View.GONE else View.VISIBLE
+        binding.btnPlayClip.setOnClickListener { playClip(clipPath.orEmpty()) }
+
         // 4. Share button
         binding.btnShareScreenshot.setOnClickListener {
             shareScreenshot(file, timestampText)
@@ -84,6 +89,28 @@ class EventDetailDialog : BottomSheetDialogFragment() {
         binding.btnDeleteEventDetail.setOnClickListener {
             onDeleteListener?.invoke(currentEvent)
             dismiss()
+        }
+    }
+
+    private fun playClip(path: String) {
+        val file = File(path)
+        if (!file.exists()) {
+            Toast.makeText(requireContext(), R.string.clip_missing, Toast.LENGTH_SHORT).show()
+            return
+        }
+        try {
+            val uri = FileProvider.getUriForFile(
+                requireContext(), "${requireContext().packageName}.fileprovider", file
+            )
+            startActivity(
+                Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "video/mp4")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Unable to play clip: ${e.message}")
+            Toast.makeText(requireContext(), R.string.clip_no_player, Toast.LENGTH_LONG).show()
         }
     }
 

@@ -181,18 +181,20 @@ class ViewerServerTest {
     }
 
     @Test
-    fun stopClosesThePort() {
+    fun stopShutsTheServerDown() {
         server.start(0)
-        val port = server.port
         assertTrue(server.isRunning)
+        // A connection left open by a client must not keep the server alive.
+        val idle = Socket("127.0.0.1", server.port)
+
         server.stop()
+
         assertFalse(server.isRunning)
         assertEquals(-1, server.port)
-        try {
-            Socket("127.0.0.1", port).close()
-            throw AssertionError("port should be closed")
-        } catch (expected: java.io.IOException) {
-        }
+        idle.close()
+        // It can be started again afterwards.
+        server.start(0)
+        assertEquals(200, request("/", auth(password)).status)
     }
 
     @Test

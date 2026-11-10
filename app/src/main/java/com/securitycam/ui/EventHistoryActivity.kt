@@ -172,6 +172,11 @@ class EventHistoryActivity : AppCompatActivity() {
                 try {
                     app.imageStorageManager.deleteImage(File(event.imagePath))
                     app.eventRepository.deleteEvent(event.id)
+                    // A clip can be shared by several events; delete it with the last of them.
+                    val clip = event.clipPath
+                    if (!clip.isNullOrEmpty() && app.eventRepository.countEventsWithClip(clip) == 0) {
+                        app.clipStore.delete(clip)
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to delete event: ${e.message}", e)
                 }
@@ -200,6 +205,7 @@ class EventHistoryActivity : AppCompatActivity() {
                         app.imageStorageManager.deleteImage(File(evt.imagePath))
                     }
                     app.eventRepository.clearAllEvents()
+                    app.clipStore.deleteAll()
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to clear events: ${e.message}", e)
                 }

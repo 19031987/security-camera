@@ -24,7 +24,9 @@ data class MotionEventEntity(
     /** Names of enrolled household members recognised in this event; null when nobody was. */
     val recognizedPerson: String? = null,
     /** What the on-device model saw moving, e.g. "Person"; null when it couldn't tell. */
-    val detectedLabel: String? = null
+    val detectedLabel: String? = null,
+    /** The video clip recorded for this event, if any. Several events can share one clip. */
+    val clipPath: String? = null
 ) {
     companion object {
         const val STATUS_SENT = "SENT"

@@ -54,4 +54,13 @@ interface MotionEventDao {
 
     @Query("UPDATE motion_events SET emailStatus = :status WHERE id = :id")
     suspend fun updateEmailStatus(id: String, status: String): Int
+
+    @Query("UPDATE motion_events SET clipPath = :path WHERE id = :id")
+    suspend fun updateClipPath(id: String, path: String?): Int
+
+    @Query("UPDATE motion_events SET clipPath = NULL WHERE clipPath = :path")
+    suspend fun clearClipPath(path: String): Int
+
+    @Query("SELECT COUNT(*) FROM motion_events WHERE clipPath = :path")
+    suspend fun countEventsWithClip(path: String): Int
 }

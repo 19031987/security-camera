@@ -70,4 +70,18 @@ class RoomEventRepository(
         dao.deleteAll()
         Unit
     }
+
+    override suspend fun updateClipPath(id: String, path: String?) = withContext(ioDispatcher) {
+        dao.updateClipPath(id, path)
+        Unit
+    }
+
+    override suspend fun clearClipPath(path: String) = withContext(ioDispatcher) {
+        dao.clearClipPath(path)
+        Unit
+    }
+
+    override suspend fun countEventsWithClip(path: String): Int = withContext(ioDispatcher) {
+        dao.countEventsWithClip(path)
+    }
 }

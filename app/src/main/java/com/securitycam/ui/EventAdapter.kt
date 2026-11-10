@@ -94,6 +94,7 @@ class EventAdapter(
                 "$detected · ${formatMotionScore(item.motionScore)}"
             }
             binding.tvLowLight.visibility = if (item.isLowLight) View.VISIBLE else View.GONE
+            binding.tvClipBadge.visibility = if (item.clipPath.isNullOrEmpty()) View.GONE else View.VISIBLE
             val recognized = item.recognizedPerson
             binding.tvRecognized.visibility = if (recognized.isNullOrBlank()) View.GONE else View.VISIBLE
             binding.tvRecognized.text = binding.root.context.getString(R.string.event_recognized, recognized.orEmpty())
