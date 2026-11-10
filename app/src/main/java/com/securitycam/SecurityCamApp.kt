@@ -1,5 +1,6 @@
 package com.securitycam
 
+import com.securitycam.core.push.ReceivedAlertStore
 import com.securitycam.core.storage.ClipStore
 import com.securitycam.core.push.FcmPushNotifier
 import com.securitycam.core.push.FcmSender
@@ -73,6 +74,9 @@ class SecurityCamApp : Application() {
     lateinit var driveUploader: DriveUploader
     lateinit var fcmSender: FcmSender
     lateinit var clipStore: ClipStore
+
+    /** Receiver role: the notifications this phone has been sent. */
+    lateinit var receivedAlerts: ReceivedAlertStore
 
     companion object {
         const val TAG = "SecurityCamApp"
@@ -148,6 +152,7 @@ class SecurityCamApp : Application() {
         sceneDetector = TfliteSceneDetector(this)
 
         clipStore = ClipStore(File(filesDir, ClipStore.DIRECTORY_NAME))
+        receivedAlerts = ReceivedAlertStore(File(filesDir, ReceivedAlertStore.DIRECTORY_NAME))
         fcmSender = FcmSender(
             accountProvider = { ServiceAccount.parse(settingsRepository.getSettings().pushServiceAccountJson) }
         )

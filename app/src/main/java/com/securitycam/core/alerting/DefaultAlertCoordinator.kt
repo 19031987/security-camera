@@ -127,7 +127,9 @@ class DefaultAlertCoordinator(
 
         // Step 2c: Alert rules. Home mode and kinds the owner didn't select are recorded quietly,
         // again without using up the cooldown.
-        if (AlertPolicy.decide(settingsRepository.getSettings(), payload.detectedKind, payload.isLowLight) !=
+        if (AlertPolicy.decide(
+                settingsRepository.getSettings(), payload.detectedKind, payload.isLowLight, payload.timestamp
+            ) !=
             AlertPolicy.Verdict.ALERT
         ) {
             eventRepository.updateSmsStatus(payload.eventId, MotionEventEntity.STATUS_QUIET)
@@ -322,7 +324,9 @@ class DefaultAlertCoordinator(
         val notifier = pushNotifier ?: return null
         val names = payload.recognizedPeople?.takeIf { it.isNotBlank() } ?: return null
         val settings = settingsRepository.getSettings()
-        if (!settings.pushEnabled || !settings.pushNotifyArrivals || settings.alertMode == AlertPolicy.MODE_HOME) {
+        if (!settings.pushEnabled || !settings.pushNotifyArrivals ||
+            AlertPolicy.effectiveMode(settings, payload.timestamp) == AlertPolicy.MODE_HOME
+        ) {
             return null
         }
         val recentlyAnnounced = names == lastArrivalPushNames &&

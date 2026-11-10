@@ -22,6 +22,10 @@ import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.timepicker.MaterialTimePicker
+import com.google.android.material.timepicker.TimeFormat
+import com.securitycam.core.alerting.AlertPolicy
+import com.securitycam.core.alerting.ModeSchedule
 import com.google.firebase.FirebaseApp
 import com.securitycam.core.push.PushMessage
 import com.securitycam.core.push.ServiceAccount
@@ -153,6 +157,13 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchKnownPeople.isChecked = settings.knownPeopleEnabled
         binding.switchSmsPicture.isChecked = settings.smsSendPicture
         binding.switchClips.isChecked = settings.recordClips
+
+        // Mode schedule
+        binding.switchSchedule.isChecked = settings.scheduleEnabled
+        scheduleDayChips().forEachIndexed { index, chip ->
+            chip.isChecked = (settings.scheduleAwayDays and (1 shl index)) != 0
+        }
+        renderSchedule()
 
         // Phone notifications
         val firebaseReady = FirebaseApp.getApps(this).isNotEmpty()
@@ -347,6 +358,16 @@ class SettingsActivity : AppCompatActivity() {
                 .show()
         }
 
+        // Mode schedule
+        binding.switchSchedule.setOnCheckedChangeListener { button, _ ->
+            if (button.isPressed) saveSchedule()
+        }
+        scheduleDayChips().forEach { chip ->
+            chip.setOnCheckedChangeListener { button, _ -> if (button.isPressed) saveSchedule() }
+        }
+        binding.btnScheduleStart.setOnClickListener { pickScheduleTime(isStart = true) }
+        binding.btnScheduleEnd.setOnClickListener { pickScheduleTime(isStart = false) }
+
         // Video clips
         binding.switchClips.setOnCheckedChangeListener { _, isChecked ->
             val cur = app.settingsRepository.getSettings()
@@ -503,6 +524,89 @@ class SettingsActivity : AppCompatActivity() {
                 renderPushState(getString(R.string.push_key_rejected, check.errorMessage.orEmpty()), isError = true)
             }
         }
+    }
+
+    /** Monday first, matching the bit order used by [ModeSchedule]. */
+    private fun scheduleDayChips() = listOf(
+        binding.chipDayMon, binding.chipDayTue, binding.chipDayWed, binding.chipDayThu,
+        binding.chipDayFri, binding.chipDaySat, binding.chipDaySun
+    )
+
+    private fun pickScheduleTime(isStart: Boolean) {
+        val cur = app.settingsRepository.getSettings()
+        val minutes = if (isStart) cur.scheduleAwayStartMinutes else cur.scheduleAwayEndMinutes
+        val picker = MaterialTimePicker.Builder()
+            .setTimeFormat(TimeFormat.CLOCK_24H)
+            .setHour(minutes / 60)
+            .setMinute(minutes % 60)
+            .setTitleText(if (isStart) R.string.schedule_away_from else R.string.schedule_away_until)
+            .build()
+        picker.addOnPositiveButtonClickListener {
+            val chosen = picker.hour * 60 + picker.minute
+            val latest = app.settingsRepository.getSettings()
+            app.settingsRepository.updateSettings(
+                if (isStart) latest.copy(scheduleAwayStartMinutes = chosen)
+                else latest.copy(scheduleAwayEndMinutes = chosen)
+            )
+            saveSchedule()
+        }
+        picker.show(supportFragmentManager, "schedule_time")
+    }
+
+    /** Stores the days and the on/off switch. A timetable that can't work is kept switched off. */
+    private fun saveSchedule() {
+        var days = 0
+        scheduleDayChips().forEachIndexed { index, chip -> if (chip.isChecked) days = days or (1 shl index) }
+        val cur = app.settingsRepository.getSettings()
+        val schedule = ModeSchedule(cur.scheduleAwayStartMinutes, cur.scheduleAwayEndMinutes, days)
+        app.settingsRepository.updateSettings(
+            cur.copy(scheduleAwayDays = days, scheduleEnabled = binding.switchSchedule.isChecked && schedule.isValid)
+        )
+        renderSchedule()
+    }
+
+    private fun renderSchedule() {
+        val settings = app.settingsRepository.getSettings()
+        val schedule = ModeSchedule(
+            settings.scheduleAwayStartMinutes, settings.scheduleAwayEndMinutes, settings.scheduleAwayDays
+        )
+        binding.btnScheduleStart.text = ModeSchedule.formatTime(settings.scheduleAwayStartMinutes)
+        binding.btnScheduleEnd.text = ModeSchedule.formatTime(settings.scheduleAwayEndMinutes)
+        if (binding.switchSchedule.isChecked != settings.scheduleEnabled) {
+            binding.switchSchedule.isChecked = settings.scheduleEnabled
+        }
+
+        val problem = when {
+            settings.scheduleAwayStartMinutes == settings.scheduleAwayEndMinutes ->
+                getString(R.string.schedule_error_same_time)
+            (settings.scheduleAwayDays and ModeSchedule.ALL_DAYS) == 0 -> getString(R.string.schedule_error_no_days)
+            else -> null
+        }
+        binding.tvScheduleStatus.text = when {
+            problem != null -> problem
+            settings.scheduleEnabled -> {
+                val now = getString(
+                    R.string.schedule_now,
+                    getString(
+                        if (schedule.modeAt(System.currentTimeMillis()) == AlertPolicy.MODE_HOME) R.string.mode_home
+                        else R.string.mode_away
+                    )
+                )
+                if (settings.scheduleAwayEndMinutes < settings.scheduleAwayStartMinutes) {
+                    now + " " + getString(R.string.schedule_overnight_note)
+                } else {
+                    now
+                }
+            }
+            settings.scheduleAwayEndMinutes < settings.scheduleAwayStartMinutes ->
+                getString(R.string.schedule_overnight_note)
+            else -> ""
+        }
+        binding.tvScheduleStatus.setTextColor(
+            androidx.core.content.ContextCompat.getColor(
+                this, if (problem != null) R.color.status_disarmed else R.color.on_surface
+            )
+        )
     }
 
     private fun connectDrive() {

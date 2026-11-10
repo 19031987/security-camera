@@ -235,6 +235,34 @@ class PushAlertTest {
     }
 
     @Test
+    fun receivedAlertsAreListedNewestFirstWithTheirPictures() {
+        val store = SecurityCamApp.getInstance().receivedAlerts
+        store.clear()
+        val picture = byteArrayOf(5, 6, 7)
+
+        AlertMessagingService.show(context, PushMessage.build(PushMessage.TYPE_ALERT, "Person at your door", "Detected.", 10L, picture))
+        AlertMessagingService.show(context, PushMessage.build(PushMessage.TYPE_ARRIVAL, "Asha is home", "", 20L, null))
+
+        val listed = store.current()
+        assertEquals(listOf("Asha is home", "Person at your door"), listed.map { it.title })
+        assertEquals(10L, listed[1].time)
+        assertTrue(picture.contentEquals(store.pictureOf(listed[1])!!.readBytes()))
+        assertNull(store.pictureOf(listed[0]))
+    }
+
+    @Test
+    fun anAlertIsListedEvenWhenNotificationsAreNotAllowed() {
+        val store = SecurityCamApp.getInstance().receivedAlerts
+        store.clear()
+        shadowOf(context as Application).denyPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
+
+        val shown = AlertMessagingService.show(context, PushMessage.build(PushMessage.TYPE_ALERT, "Person at your door", "", 1L, null))
+
+        assertFalse(shown)
+        assertEquals("Person at your door", store.current().single().title)
+    }
+
+    @Test
     fun aMessageWithNoTitleIsDropped() {
         assertFalse(AlertMessagingService.show(context, mapOf(PushMessage.KEY_MESSAGE to "x")))
         assertTrue(notifications().isEmpty())

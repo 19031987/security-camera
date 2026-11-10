@@ -63,6 +63,10 @@ class SharedPreferencesSettingsRepository(
         private const val KEY_DEVICE_ROLE = "pref_device_role"
         private const val KEY_RECEIVER_LINK_CODE = "pref_receiver_link_code"
         private const val KEY_RECORD_CLIPS = "pref_record_clips"
+        private const val KEY_SCHEDULE_ENABLED = "pref_schedule_enabled"
+        private const val KEY_SCHEDULE_START = "pref_schedule_away_start"
+        private const val KEY_SCHEDULE_END = "pref_schedule_away_end"
+        private const val KEY_SCHEDULE_DAYS = "pref_schedule_away_days"
 
         fun create(context: Context): SharedPreferencesSettingsRepository {
             val sp = context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
@@ -153,7 +157,11 @@ class SharedPreferencesSettingsRepository(
             pushNotifyArrivals = prefs.getBoolean(KEY_PUSH_ARRIVALS, true),
             deviceRole = prefs.getString(KEY_DEVICE_ROLE, "") ?: "",
             receiverLinkCode = securePrefs.getString(KEY_RECEIVER_LINK_CODE, "") ?: "",
-            recordClips = prefs.getBoolean(KEY_RECORD_CLIPS, true)
+            recordClips = prefs.getBoolean(KEY_RECORD_CLIPS, true),
+            scheduleEnabled = prefs.getBoolean(KEY_SCHEDULE_ENABLED, false),
+            scheduleAwayStartMinutes = prefs.getInt(KEY_SCHEDULE_START, 9 * 60),
+            scheduleAwayEndMinutes = prefs.getInt(KEY_SCHEDULE_END, 18 * 60),
+            scheduleAwayDays = prefs.getInt(KEY_SCHEDULE_DAYS, 31)
         )
     }
 
@@ -208,6 +216,10 @@ class SharedPreferencesSettingsRepository(
             .putBoolean(KEY_PUSH_ARRIVALS, settings.pushNotifyArrivals)
             .putString(KEY_DEVICE_ROLE, settings.deviceRole)
             .putBoolean(KEY_RECORD_CLIPS, settings.recordClips)
+            .putBoolean(KEY_SCHEDULE_ENABLED, settings.scheduleEnabled)
+            .putInt(KEY_SCHEDULE_START, settings.scheduleAwayStartMinutes)
+            .putInt(KEY_SCHEDULE_END, settings.scheduleAwayEndMinutes)
+            .putInt(KEY_SCHEDULE_DAYS, settings.scheduleAwayDays)
             .apply()
     }
 
